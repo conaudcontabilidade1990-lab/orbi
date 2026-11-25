@@ -71,5 +71,17 @@ def aplicar(url, progresso=lambda txt: None):
     os.replace(exe, antigo)      # renomeia o .exe em uso
     os.replace(novo, exe)
     progresso("reiniciando...")
-    subprocess.Popen([str(exe)], close_fds=True)
+    reabrir(exe)
     os._exit(0)
+
+
+def reabrir(exe):
+    """Abre uma cópia nova e independente do Orbi.exe.
+
+    Sem isso, o PyInstaller faria a nova cópia reaproveitar a pasta temporária desta,
+    que é apagada quando esta fecha (faltariam módulos, ex.: winrt._winrt)."""
+    env = {k: v for k, v in os.environ.items() if not k.startswith(("_MEI", "_PYI"))}
+    env["PYINSTALLER_RESET_ENVIRONMENT"] = "1"
+    subprocess.Popen([str(exe)], env=env, close_fds=True,
+                     creationflags=getattr(subprocess, "DETACHED_PROCESS", 0)
+                     | getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0))
