@@ -44,16 +44,23 @@ def trocar_empresa(t, codigo):
     t.log(f"  empresa {codigo} ativa")
 
 
+def janela_maximizada(t, palavra_titulo):
+    titulo = t.ler("titulo_app")
+    return "gerar parcelas" in titulo and palavra_titulo in titulo
+
+
 def abrir_gerar_parcelas(t, ponto_menu, palavra_titulo):
     """Utilitários > Parcelas > Gerar Parcelas > (Entradas/Saídas/Serviços), maximizada."""
-    t.clicar("menu_utilitarios")
-    t.clicar("menu_parcelas")
-    t.clicar("menu_gerar")
+    t.clicar("menu_utilitarios", espera=1)
+    t.clicar("menu_parcelas", espera=1)
+    t.clicar("menu_gerar", espera=1)
     t.clicar(ponto_menu, espera=2.5)
-    t.clicar("maximizar", espera=2)
-    titulo = t.ler("titulo_janela")
-    if "gerar parcelas" not in titulo or palavra_titulo not in titulo:
-        raise Parar(f"A janela aberta não parece ser a esperada (título lido: '{titulo}').")
+    if not janela_maximizada(t, palavra_titulo):
+        x, y = t.P["titulo_janela_normal"]
+        t.duplo(x, y, espera=2)
+    if not janela_maximizada(t, palavra_titulo):
+        raise Parar(f"A janela Gerar Parcelas ({palavra_titulo}) não abriu maximizada "
+                    f"(título lido: '{t.ler('titulo_app')}').")
 
 
 def garantir_caixa(t, ponto, marcada):

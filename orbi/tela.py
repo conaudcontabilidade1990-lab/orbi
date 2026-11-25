@@ -127,6 +127,11 @@ class Tela:
             pyautogui.click(x, y)
         self.dormir(self.T["pausa"] if espera is None else espera)
 
+    def duplo(self, x, y, espera=None):
+        self.checar()
+        pyautogui.doubleClick(x, y)
+        self.dormir(self.T["pausa"] if espera is None else espera)
+
     def digitar(self, texto, espera=None):
         self.checar()
         pyautogui.typewrite(str(texto), interval=0.05)

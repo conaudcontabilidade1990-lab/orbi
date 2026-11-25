@@ -12,7 +12,7 @@ PASTA = Path(os.environ.get("APPDATA", Path.home())) / "Orbi"
 PASTA_LOGS = PASTA / "logs"
 ARQUIVO = PASTA / "config.json"
 
-ESQUEMA = 2  # sobe quando pontos/regiões padrão mudam; ajustes antigos são descartados
+ESQUEMA = 3  # sobe quando pontos/regiões padrão mudam; ajustes antigos são descartados
 
 PADRAO = {
     "resolucao": [1366, 768],
@@ -29,26 +29,30 @@ PADRAO = {
         "titulo_app": [60, 12],
         "troca_empresa": [131, 93], "troca_por_codigo": [482, 199], "troca_busca": [603, 227],
         "troca_acessar": [703, 704], "troca_fechar": [875, 704],
-        "menu_utilitarios": [495, 53], "menu_parcelas": [583, 436], "menu_gerar": [1003, 439],
-        "menu_entradas": [1142, 441], "menu_saidas": [1136, 463], "menu_servicos": [1141, 485],
-        "maximizar": [1004, 206],
+        "menu_utilitarios": [495, 53], "menu_parcelas": [583, 441], "menu_gerar": [917, 443],
+        "menu_entradas": [1055, 445], "menu_saidas": [1050, 468], "menu_servicos": [1053, 490],
+        "titulo_janela_normal": [500, 217],   # duplo clique maximiza a janela Gerar Parcelas
+        # janela maximizada
         "caixa_sem_parcelas": [42, 190], "caixa_nao_geram": [42, 210],
         "buscar": [1312, 689], "busca_avancada": [1206, 689], "todos": [60, 689],
-        "gerar_abrir": [1098, 689], "fechar_janela": [1355, 33],
-        "venc_dropdown": [583, 354], "venc_informar": [490, 384], "campo_dias": [488, 378],
+        "gerar_abrir": [1098, 689], "fechar_janela": [1356, 33],
+        # diálogo Gerar
+        "radio_todas": [333, 254], "radio_somente": [333, 274],
+        "venc_dropdown": [583, 354], "venc_informar": [500, 379], "campo_dias": [488, 378],
         "dlg_gerar": [1014, 244], "dlg_cancelar": [1014, 278],
         "btn_sim": [752, 440], "btn_ok_sucesso": [758, 440], "btn_ok_vazio": [830, 440],
     },
     # Regiões de leitura (x, y, largura, altura). null = ainda não calibrada.
     "regioes": {
-        "titulo_app": [0, 0, 320, 24],          # "Domínio Escrita Fiscal" (teste do OCR)
+        "titulo_app": [0, 0, 700, 24],          # título do Domínio; com janela maximizada traz [Gerar Parcelas...]
         "mensagem": [250, 300, 866, 180],
-        "empresa_ativa": [1150, 66, 216, 30],   # "A.L.B AGROPEC - 315"
+        "empresa_ativa": [1150, 60, 216, 52],   # "ADEMIR BELTRANI - 611" (normal ou com janela maximizada)
         "troca_linha": [455, 289, 440, 18],     # 1ª linha (destacada) da Troca de empresas
-        "titulo_janela": [0, 20, 900, 28],
-        "dialogo_gerar": [300, 200, 780, 260],
-        "campo_dias": [455, 368, 90, 22],
-        "campo_parcelas": None,
+        "dialogo_gerar": [294, 190, 782, 400],
+        "campo_parcelas": [468, 323, 44, 16],
+        "campo_vencimento": [468, 346, 110, 17],
+        "campo_dias": [468, 370, 44, 17],
+        "botao_buscar": [1262, 679, 100, 20],
     },
     # Preferências da tela
     "ultima_rotina": "",

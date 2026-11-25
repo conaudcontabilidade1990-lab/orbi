@@ -25,36 +25,47 @@ class GerarParcelas(Rotina):
     # ---- passos ----
     def _buscar(self, t):
         d.garantir_caixa(t, "caixa_sem_parcelas", True)
+        rotulo = t.ler("botao_buscar")
+        if "buscar" not in rotulo:
+            raise Parar(f"O botão Buscar não está disponível (lido: '{rotulo}').")
         t.clicar("buscar", espera=1)
         if t.esperar("mensagem", {"vazio": d.MSG["vazio"]}, t.T["busca"]) == "vazio":
             t.clicar("btn_ok_vazio", espera=1)
             return "vazio"
         return "lista"
 
+    def _ler_campo(self, t, regiao, esperado, tentativas=3):
+        lido = ""
+        for _ in range(tentativas):  # o Domínio às vezes demora a redesenhar o campo
+            lido = t.ler(regiao, digitos=True)
+            if lido == esperado:
+                break
+            t.dormir(1)
+        return lido
+
     def _configurar_dialogo(self, t):
         t.clicar("todos", espera=1.2)
         t.clicar("gerar_abrir", espera=2)
         texto = t.ler("dialogo_gerar")
-        if "vencimento" not in texto:
-            raise Parar(f"O diálogo de geração não apareceu como esperado (lido: '{texto}').")
-        t.clicar("venc_dropdown")
-        t.clicar("venc_informar")
+        if "vencimento" not in texto or "quantidade de parcelas" not in texto:
+            raise Parar(f"O diálogo de geração não apareceu como esperado (lido: '{texto[:120]}').")
+        t.clicar("venc_dropdown", espera=1)
+        t.clicar("venc_informar", espera=1)
         t.clicar("campo_dias", triplo=True, espera=0.3)
-        t.digitar(self.dias, espera=1.2)
+        t.digitar(self.dias, espera=1.5)
 
-        texto = t.ler("dialogo_gerar")
         erros = []
-        if "informar" not in texto:
-            erros.append("vencimento não está em 'Informar'")
-        if "somente" not in texto:
-            erros.append("não achei 'Somente as notas selecionadas'")
-        dias = t.ler("campo_dias", digitos=True)
+        venc = t.ler("campo_vencimento")
+        if "informar" not in venc:
+            erros.append(f"vencimento lido = '{venc}', esperado 'Informar'")
+        if t.escuros("radio_somente") <= t.escuros("radio_todas"):
+            erros.append("'Somente as notas selecionadas' não está marcado")
+        parc = self._ler_campo(t, "campo_parcelas", "1")
+        if parc != "1":
+            erros.append(f"parcelas lido = '{parc}', esperado 1")
+        dias = self._ler_campo(t, "campo_dias", str(self.dias))
         if dias != str(self.dias):
             erros.append(f"dias lido = '{dias}', esperado {self.dias}")
-        if t.R.get("campo_parcelas"):
-            parc = t.ler("campo_parcelas", digitos=True)
-            if parc != "1":
-                erros.append(f"parcelas lido = '{parc}', esperado 1")
         if erros:
             raise Parar("Diálogo com valores diferentes do esperado: " + "; ".join(erros))
 
@@ -85,9 +96,13 @@ class GerarParcelas(Rotina):
             return "SIMULAÇÃO ok — diálogo conferido e cancelado, nada gerado"
 
         self._gerar(t)
-        if "vencimento" in t.ler("dialogo_gerar"):
+        if "quantidade de parcelas" in t.ler("dialogo_gerar"):
             t.clicar("dlg_cancelar", espera=1)
+        # conferência: fecha, reabre e busca de novo — deve vir vazio
+        d.fechar_janela(t)
+        d.abrir_gerar_parcelas(t, self.ponto_menu, self.palavra_titulo)
         if self._buscar(t) != "vazio":
+            d.fechar_janela(t)
             raise Parar("Depois de gerar, a nova busca ainda trouxe notas. Não gerei de novo.")
         d.fechar_janela(t)
         return f"parcelas geradas (1 parcela, {self.dias} dia)"
