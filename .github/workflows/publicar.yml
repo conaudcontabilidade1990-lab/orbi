@@ -39,6 +39,12 @@ jobs:
       - name: Teste da leitura de números
         run: python tests/test_numeros.py
 
+      - name: Teste da janela (login e departamentos)
+        run: python tests/test_app.py
+
+      - name: Teste do login no Firebase do portal
+        run: python tests/test_login_firebase.py
+
       - name: Teste da busca de janelas
         run: python -c "from orbi import janela; l = janela.janelas_visiveis(); print(len(l), 'janelas'); print(janela.achar())"
 

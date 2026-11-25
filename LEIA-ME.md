@@ -12,6 +12,11 @@ sem IA e sem gastar tokens.
 Logs, relatórios e imagens das paradas ficam em `%APPDATA%\Orbi\logs`.
 Ajustes da calibração ficam em `%APPDATA%\Orbi\config.json` (atualizações não apagam).
 
+## Login e departamentos
+Entra com a mesma conta do Portal Conaud (administrador ou operador ativo). O Orbi mostra só os
+departamentos liberados para a pessoa no portal; administrador vê todos e também a aba Calibrar.
+Cada rotina declara o seu departamento (`departamento = "fiscal"`, ids iguais aos do portal).
+
 ## Rotinas
 | Rotina | Regra |
 |---|---|

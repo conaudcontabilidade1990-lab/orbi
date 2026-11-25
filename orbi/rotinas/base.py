@@ -11,6 +11,7 @@ class Resultado:
 class Rotina:
     id = ""
     nome = ""
+    departamento = "fiscal"       # id do departamento no Portal Conaud (conta.DEPARTAMENTOS)
     descricao = ""
     pede_empresas = True          # mostra o campo de códigos de empresa
     precisa_regioes = ()          # regiões que precisam estar calibradas para rodar de verdade

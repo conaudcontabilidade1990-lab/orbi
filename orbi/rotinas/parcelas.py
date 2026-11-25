@@ -13,8 +13,9 @@ from .base import Rotina
 class GerarParcelas(Rotina):
     precisa_regioes = ("campo_parcelas",)
 
-    def __init__(self, id_, nome, ponto_menu, palavra_titulo, dias=1):
+    def __init__(self, id_, nome, ponto_menu, palavra_titulo, dias=1, departamento="fiscal"):
         self.id = id_
+        self.departamento = departamento
         self.nome = nome
         self.ponto_menu = ponto_menu
         self.palavra_titulo = palavra_titulo
