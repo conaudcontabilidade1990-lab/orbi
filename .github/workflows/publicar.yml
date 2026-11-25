@@ -39,6 +39,9 @@ jobs:
       - name: Teste da leitura de números
         run: python tests/test_numeros.py
 
+      - name: Teste da busca de janelas
+        run: python -c "from orbi import janela; l = janela.janelas_visiveis(); print(len(l), 'janelas'); print(janela.achar())"
+
       - name: Teste do OCR (Python)
         run: |
           python main.py --testar-ocr

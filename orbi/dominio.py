@@ -16,9 +16,10 @@ def trazer_para_frente(t):
     """Acha o Domínio pelo título (mesmo atrás de outra janela, minimizado ou no outro monitor),
     maximiza no monitor principal e confere pelo título lido na tela."""
     from . import janela
-    hwnd = janela.achar("dominio escrita fiscal")
+    hwnd, diag = janela.achar()
     if not hwnd:
-        raise Parar("Não encontrei a janela do Domínio Escrita Fiscal aberta.")
+        raise Parar("Não encontrei a janela do Domínio Escrita Fiscal aberta. "
+                    f"Janelas vistas: {diag}")
     janela.trazer_para_frente(hwnd)
     t.clicar("titulo_app", espera=1)   # já maximizado no principal: o título fica neste ponto
     if "dominio escrita fiscal" not in t.ler("titulo_app"):
