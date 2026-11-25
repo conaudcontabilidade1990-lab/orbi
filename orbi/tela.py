@@ -34,27 +34,60 @@ def norm(s):
 
 
 # ------------------------------- OCR -------------------------------
-_idioma_ok = None
+# OCR que já vem no Windows (Windows.Media.Ocr), chamado direto e sem asyncio.
+_motor = None
+_trava = threading.Lock()
 
 
-def ocr_imagem(img, idioma="pt-BR"):
-    """Lê o texto de uma imagem com o OCR que já vem no Windows (sem instalar nada)."""
-    global _idioma_ok
-    import winocr  # importado aqui para o resto do app funcionar mesmo sem OCR
+def _criar_motor(idioma):
+    from winrt.windows.globalization import Language
+    from winrt.windows.media.ocr import OcrEngine
 
+    for lang in (idioma, "pt-BR", "en-US"):
+        try:
+            eng = OcrEngine.try_create_from_language(Language(lang))
+        except Exception:
+            eng = None
+        if eng is not None:
+            return eng
+    eng = OcrEngine.try_create_from_user_profile_languages()
+    if eng is None:
+        raise RuntimeError("OCR do Windows indisponível: instale o idioma Português "
+                           "(Configurações > Hora e idioma > Idioma).")
+    return eng
+
+
+def preparar(img):
     img = ImageOps.grayscale(img)
     if sum(img.getdata()) / (img.width * img.height) < 110:  # texto claro em fundo escuro
         img = ImageOps.invert(img)
-    img = img.convert("RGB")
-    img = img.resize((img.width * 3, img.height * 3))
-    for lang in ([_idioma_ok] if _idioma_ok else [idioma, "pt-BR", "en-US"]):
-        try:
-            r = winocr.recognize_pil_sync(img, lang)
-            _idioma_ok = lang
-            return r["text"] if isinstance(r, dict) else getattr(r, "text", "")
-        except Exception:
-            continue
-    raise RuntimeError("OCR do Windows indisponível (instale o idioma Português em Configurações > Idioma).")
+    return img.resize((img.width * 3, img.height * 3)).convert("RGBA")
+
+
+def ocr_imagem(img, idioma="pt-BR", preparar_img=True):
+    """Lê o texto de uma imagem PIL."""
+    global _motor
+    from winrt.windows.foundation import AsyncStatus
+    from winrt.windows.graphics.imaging import BitmapPixelFormat, SoftwareBitmap
+    from winrt.windows.storage.streams import DataWriter
+
+    with _trava:
+        if _motor is None:
+            _motor = _criar_motor(idioma)
+        img = preparar(img) if preparar_img else img.convert("RGBA")
+        w = DataWriter()
+        w.write_bytes(img.tobytes())
+        sb = SoftwareBitmap.create_copy_from_buffer(
+            w.detach_buffer(), BitmapPixelFormat.RGBA8, img.width, img.height)
+        op = _motor.recognize_async(sb)
+        fim = time.time() + 15
+        while op.status == AsyncStatus.STARTED:
+            if time.time() > fim:
+                raise RuntimeError("OCR do Windows não respondeu em 15 s.")
+            time.sleep(0.01)
+        if op.status != AsyncStatus.COMPLETED:
+            raise RuntimeError(f"OCR do Windows falhou (status {op.status}).")
+        return op.get_results().text or ""
 
 
 class Tela:

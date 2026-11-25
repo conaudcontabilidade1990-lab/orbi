@@ -236,7 +236,9 @@ class App:
             if type(e).__name__ == "FailSafeException":
                 self.log("Interrompido: mouse no canto da tela.")
             else:
+                import traceback
                 self.log(f"!! Erro inesperado: {type(e).__name__}: {e}")
+                self.log(traceback.format_exc())
         feitas = {r.empresa for r in resultados}
         linhas = [f"{r.empresa}: {r.texto}" for r in resultados]
         linhas += [f"{c}: não processada" for c in empresas if c not in feitas]
@@ -278,7 +280,8 @@ class App:
                 f"(marcada se >= {self.cfg['limiar_caixa']})")
             log(f"  tela inteira salva: {t.foto('calib_tela').name}")
         except Exception as e:
-            log(f"Erro: {type(e).__name__}: {e}")
+            import traceback
+            log(f"Erro: {type(e).__name__}: {e}\n{traceback.format_exc()}")
         self.root.after(0, self.root.deiconify)
 
     def _posicao(self):

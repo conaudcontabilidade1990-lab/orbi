@@ -1,3 +1,9 @@
 pyautogui==0.9.54
-pillow>=10
-winocr>=0.0.11
+pillow>=10.1
+winrt-runtime>=2.0
+winrt-Windows.Foundation>=2.0
+winrt-Windows.Foundation.Collections>=2.0
+winrt-Windows.Globalization>=2.0
+winrt-Windows.Graphics.Imaging>=2.0
+winrt-Windows.Media.Ocr>=2.0
+winrt-Windows.Storage.Streams>=2.0

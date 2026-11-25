@@ -36,13 +36,24 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt pyinstaller
 
-      - name: Teste rápido (importações)
-        run: python -c "import orbi.app, orbi.rotinas, winocr, pyautogui; print('ok')"
+      - name: Teste do OCR (Python)
+        run: |
+          python main.py --testar-ocr
+          $c = $LASTEXITCODE
+          Get-Content orbi/autoteste_ocr.txt
+          exit $c
 
       - name: Montar Orbi.exe
         run: >
           pyinstaller --noconfirm --onefile --windowed --name Orbi --icon orbi.ico
-          --collect-all winocr --collect-all winrt main.py
+          --collect-all winrt --hidden-import _overlapped --hidden-import asyncio main.py
+
+      - name: Teste do OCR (Orbi.exe)
+        run: |
+          $p = Start-Process -FilePath dist/Orbi.exe -ArgumentList "--testar-ocr" -Wait -PassThru
+          Get-Content dist/autoteste_ocr.txt
+          if ($p.ExitCode -ne 0) { exit 1 }
+          Remove-Item dist/autoteste_ocr.txt
 
       - name: Publicar Release
         uses: softprops/action-gh-release@v2
