@@ -21,7 +21,7 @@ Ajustes da calibração ficam em `%APPDATA%\Orbi\config.json` (atualizações n�
 ## Acrescentar uma função
 1. Criar `orbi/rotinas/<nome>.py` com uma classe que herde de `Rotina` (ver `parcelas.py`).
 2. Registrar em `orbi/rotinas/__init__.py` (lista `ROTINAS`).
-3. Subir a versão em `orbi/__init__.py` (`VERSAO`), enviar ao GitHub e criar a tag `v<versão>`.
+3. Subir a versão em `orbi/__init__.py` (`VERSAO`) e enviar ao GitHub (ramo main).
    O GitHub monta o `Orbi.exe` e publica; o Orbi instalado se atualiza ao abrir.
 
 ## Segurança das rotinas

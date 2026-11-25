@@ -1,10 +1,11 @@
 name: Publicar Orbi.exe
 
-# Roda quando uma versão nova é marcada (tag v0.1.0, v0.2.0...).
-# Monta o Orbi.exe no Windows e publica como Release; o Orbi instalado se atualiza sozinho.
+# Roda quando a VERSAO em orbi/__init__.py muda no ramo main.
+# Monta o Orbi.exe no Windows e publica como Release v<VERSAO>; o Orbi instalado se atualiza sozinho.
 on:
   push:
-    tags: ["v*"]
+    branches: [main]
+    paths: ["orbi/__init__.py"]
   workflow_dispatch:
 
 permissions:
@@ -20,15 +21,15 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Conferir versão
+      - name: Ler versão
+        id: versao
         shell: python
         run: |
           import os, re
           v = re.search(r'VERSAO = "([^"]+)"', open("orbi/__init__.py", encoding="utf-8").read()).group(1)
-          ref = os.environ.get("GITHUB_REF_NAME", "")
-          if ref.startswith("v") and ref[1:] != v:
-              raise SystemExit(f"Tag {ref} diferente de VERSAO {v} em orbi/__init__.py")
           print("Versão", v)
+          with open(os.environ["GITHUB_OUTPUT"], "a") as f:
+              f.write(f"v={v}\n")
 
       - name: Instalar dependências
         run: |
@@ -44,14 +45,15 @@ jobs:
           --collect-all winocr --collect-all winrt main.py
 
       - name: Publicar Release
-        if: startsWith(github.ref, 'refs/tags/v')
         uses: softprops/action-gh-release@v2
         with:
+          tag_name: v${{ steps.versao.outputs.v }}
+          name: Orbi ${{ steps.versao.outputs.v }}
+          target_commitish: ${{ github.sha }}
           files: dist/Orbi.exe
           generate_release_notes: true
 
-      - name: Guardar artefato (execução manual)
-        if: ${{ !startsWith(github.ref, 'refs/tags/v') }}
+      - name: Guardar artefato
         uses: actions/upload-artifact@v4
         with:
           name: Orbi
