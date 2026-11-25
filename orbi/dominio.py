@@ -1,5 +1,6 @@
 """Passos comuns do Domínio Escrita Fiscal, reaproveitados pelas rotinas."""
 import re
+import time
 
 from .tela import Parar
 
@@ -23,24 +24,33 @@ def trocar_empresa(t, codigo):
     if empresa_ativa_e(t, codigo):
         t.log(f"  empresa {codigo} já está ativa")
         return
-    t.clicar("troca_empresa", espera=1.5)
-    if t.esperar("mensagem", {"x": MSG["fechar_janelas"]}, 1):
-        raise Parar("O Domínio pediu para fechar todas as janelas antes de trocar de empresa.")
+    espera = t.T.get("troca", 8)
+    t.clicar("troca_empresa", espera=1)
+    if t.esperar("troca_titulo", {"ok": ["troca de empresa"]}, espera, intervalo=0.7) != "ok":
+        if t.esperar("mensagem", {"x": MSG["fechar_janelas"]}, 1):
+            raise Parar("O Domínio pediu para fechar todas as janelas antes de trocar de empresa.")
+        raise Parar("A janela Troca de empresas não abriu.")
     t.clicar("troca_por_codigo")          # a busca pode estar em "Apelido"
     t.clicar("troca_busca")
     t.teclas("ctrl", "a")
-    t.digitar(codigo, espera=1.5)
+    t.digitar(codigo, espera=1)
+    padrao = re.compile(rf"\s*{re.escape(codigo)}(?!\d)")
+    fim = time.time() + espera            # o Domínio às vezes demora a redesenhar a lista
     linha = t.ler("troca_linha")
-    if not re.match(rf"\s*{re.escape(codigo)}(?!\d)", linha):
+    while not padrao.match(linha) and time.time() < fim:
+        t.dormir(0.7)
+        linha = t.ler("troca_linha")
+    if not padrao.match(linha):
         t.clicar("troca_fechar", espera=1)
         raise Parar(f"A empresa {codigo} não apareceu selecionada na Troca de empresas "
-                    f"(linha lida: '{linha}'). Não acessei.")
+                    f"(linha lida: '{linha}'). Confira se o código existe e está ativo. Não acessei.")
     t.clicar("troca_acessar", espera=3)
-    if not empresa_ativa_e(t, codigo):
-        t.dormir(3)  # o Domínio às vezes demora a atualizar o canto
-        if not empresa_ativa_e(t, codigo):
+    fim = time.time() + espera
+    while not empresa_ativa_e(t, codigo):
+        if time.time() > fim:
             raise Parar(f"Não consegui confirmar que a empresa {codigo} ficou ativa "
                         f"(lido no canto: '{t.ler('empresa_ativa')}').")
+        t.dormir(1)
     t.log(f"  empresa {codigo} ativa")
 
 

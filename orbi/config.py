@@ -12,14 +12,15 @@ PASTA = Path(os.environ.get("APPDATA", Path.home())) / "Orbi"
 PASTA_LOGS = PASTA / "logs"
 ARQUIVO = PASTA / "config.json"
 
-ESQUEMA = 4  # sobe quando pontos/regiões padrão mudam; ajustes antigos são descartados
+ESQUEMA = 5  # sobe quando pontos/regiões padrão mudam; ajustes antigos são descartados
 
 PADRAO = {
     "resolucao": [1366, 768],
     "idioma_ocr": "pt-BR",
     "tempos": {
         "pausa": 0.7,           # segundos entre ações
-        "busca": 8,             # espera a lista/mensagem após Buscar
+        "busca": 8,
+        "troca": 8,             # espera a janela/lista da Troca de empresas atualizar             # espera a lista/mensagem após Buscar
         "confirmacao": 15,      # espera o "Você tem certeza..."
         "sucesso": 600,         # espera "Parcelas geradas com sucesso." (listas grandes)
     },
@@ -47,6 +48,7 @@ PADRAO = {
         "titulo_app": [0, 0, 700, 24],          # título do Domínio; com janela maximizada traz [Gerar Parcelas...]
         "mensagem": [250, 300, 866, 180],
         "empresa_ativa": [1150, 60, 216, 52],   # "ADEMIR BELTRANI - 611" (normal ou com janela maximizada)
+        "troca_titulo": [433, 133, 250, 18],    # título "Troca de empresas"
         "troca_linha": [455, 289, 440, 18],     # 1ª linha (destacada) da Troca de empresas
         "dialogo_gerar": [294, 190, 782, 400],
         "campo_parcelas": [469, 324, 42, 14],  # interior do campo, sem borda e setas
