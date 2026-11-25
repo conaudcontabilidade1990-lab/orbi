@@ -83,6 +83,7 @@ class GerarParcelas(Rotina):
 
     # ---- por empresa ----
     def executar_empresa(self, t, codigo, simular):
+        d.trazer_para_frente(t)
         d.trocar_empresa(t, codigo)
         d.abrir_gerar_parcelas(t, self.ponto_menu, self.palavra_titulo)
 
