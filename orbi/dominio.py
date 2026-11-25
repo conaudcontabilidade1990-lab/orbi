@@ -26,14 +26,18 @@ def trocar_empresa(t, codigo):
     t.clicar("troca_empresa", espera=1.5)
     if t.esperar("mensagem", {"x": MSG["fechar_janelas"]}, 1):
         raise Parar("O Domínio pediu para fechar todas as janelas antes de trocar de empresa.")
+    t.clicar("troca_por_codigo")          # a busca pode estar em "Apelido"
     t.clicar("troca_busca")
     t.teclas("ctrl", "a")
     t.digitar(codigo, espera=1.5)
+    linha = t.ler("troca_linha")
+    if not re.match(rf"\s*{re.escape(codigo)}(?!\d)", linha):
+        t.clicar("troca_fechar", espera=1)
+        raise Parar(f"A empresa {codigo} não apareceu selecionada na Troca de empresas "
+                    f"(linha lida: '{linha}'). Não acessei.")
     t.clicar("troca_acessar", espera=3)
     if not empresa_ativa_e(t, codigo):
-        # às vezes o primeiro clique em Acessar não fecha o diálogo
-        if "troca de empresa" in t.ler((0, 0, *t.cfg["resolucao"])):
-            t.clicar("troca_acessar", espera=3)
+        t.dormir(3)  # o Domínio às vezes demora a atualizar o canto
         if not empresa_ativa_e(t, codigo):
             raise Parar(f"Não consegui confirmar que a empresa {codigo} ficou ativa "
                         f"(lido no canto: '{t.ler('empresa_ativa')}').")

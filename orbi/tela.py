@@ -42,7 +42,10 @@ def ocr_imagem(img, idioma="pt-BR"):
     global _idioma_ok
     import winocr  # importado aqui para o resto do app funcionar mesmo sem OCR
 
-    img = ImageOps.grayscale(img).convert("RGB")
+    img = ImageOps.grayscale(img)
+    if sum(img.getdata()) / (img.width * img.height) < 110:  # texto claro em fundo escuro
+        img = ImageOps.invert(img)
+    img = img.convert("RGB")
     img = img.resize((img.width * 3, img.height * 3))
     for lang in ([_idioma_ok] if _idioma_ok else [idioma, "pt-BR", "en-US"]):
         try:

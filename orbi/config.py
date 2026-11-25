@@ -12,6 +12,8 @@ PASTA = Path(os.environ.get("APPDATA", Path.home())) / "Orbi"
 PASTA_LOGS = PASTA / "logs"
 ARQUIVO = PASTA / "config.json"
 
+ESQUEMA = 2  # sobe quando pontos/regiões padrão mudam; ajustes antigos são descartados
+
 PADRAO = {
     "resolucao": [1366, 768],
     "idioma_ocr": "pt-BR",
@@ -25,7 +27,8 @@ PADRAO = {
     # Pontos de clique (x, y) em 1366x768
     "pontos": {
         "titulo_app": [60, 12],
-        "troca_empresa": [131, 93], "troca_busca": [600, 227], "troca_acessar": [703, 704],
+        "troca_empresa": [131, 93], "troca_por_codigo": [482, 199], "troca_busca": [603, 227],
+        "troca_acessar": [703, 704], "troca_fechar": [875, 704],
         "menu_utilitarios": [495, 53], "menu_parcelas": [583, 436], "menu_gerar": [1003, 439],
         "menu_entradas": [1142, 441], "menu_saidas": [1136, 463], "menu_servicos": [1141, 485],
         "maximizar": [1004, 206],
@@ -38,8 +41,10 @@ PADRAO = {
     },
     # Regiões de leitura (x, y, largura, altura). null = ainda não calibrada.
     "regioes": {
+        "titulo_app": [0, 0, 320, 24],          # "Domínio Escrita Fiscal" (teste do OCR)
         "mensagem": [250, 300, 866, 180],
-        "empresa_ativa": [850, 0, 516, 45],
+        "empresa_ativa": [1150, 66, 216, 30],   # "A.L.B AGROPEC - 315"
+        "troca_linha": [455, 289, 440, 18],     # 1ª linha (destacada) da Troca de empresas
         "titulo_janela": [0, 20, 900, 28],
         "dialogo_gerar": [300, 200, 780, 260],
         "campo_dias": [455, 368, 90, 22],
@@ -60,10 +65,31 @@ def _mesclar(base, extra):
     return base
 
 
+PREFERENCIAS = ("ultima_rotina", "ultimas_empresas")
+
+
+def _diferenca(atual, base):
+    """Só o que difere do padrão — assim melhorias nos padrões chegam com as atualizações."""
+    out = {}
+    for k, v in atual.items():
+        if k.startswith("_"):
+            continue
+        if isinstance(v, dict) and isinstance(base.get(k), dict):
+            d = _diferenca(v, base[k])
+            if d:
+                out[k] = d
+        elif base.get(k) != v:
+            out[k] = v
+    return out
+
+
 def carregar():
     cfg = copy.deepcopy(PADRAO)
     try:
-        _mesclar(cfg, json.loads(ARQUIVO.read_text(encoding="utf-8")))
+        dados = json.loads(ARQUIVO.read_text(encoding="utf-8"))
+        if dados.get("esquema") != ESQUEMA:  # arquivo de versão antiga: mantém só as preferências
+            dados = {k: v for k, v in dados.items() if k in PREFERENCIAS}
+        _mesclar(cfg, dados)
     except FileNotFoundError:
         pass
     except Exception as e:  # arquivo corrompido: usa padrão, mas avisa
@@ -73,5 +99,6 @@ def carregar():
 
 def salvar(cfg):
     PASTA.mkdir(parents=True, exist_ok=True)
-    dados = {k: v for k, v in cfg.items() if not k.startswith("_")}
+    dados = _diferenca(cfg, PADRAO)
+    dados["esquema"] = ESQUEMA
     ARQUIVO.write_text(json.dumps(dados, ensure_ascii=False, indent=2), encoding="utf-8")
