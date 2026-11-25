@@ -90,6 +90,50 @@ def ocr_imagem(img, idioma="pt-BR", preparar_img=True):
         return op.get_results().text or ""
 
 
+# ---------------------- números em campos (por desenho) ----------------------
+# Os campos numéricos do Domínio usam sempre a mesma fonte pequena; o OCR não lê um dígito
+# sozinho, então comparamos o desenho dos pixels. Dígito desconhecido = "?" (a rotina para).
+GLIFOS = {
+    "1": ("..#",
+          "###",
+          "..#",
+          "..#",
+          "..#",
+          "..#",
+          "..#",
+          "..#",
+          "..#"),
+}
+
+
+def numero_de_imagem(img, limiar=100, altura_cursor=11):
+    g = ImageOps.grayscale(img)
+    w, h = g.size
+    escuro = [[g.getpixel((x, y)) < limiar for x in range(w)] for y in range(h)]
+    # remove colunas do cursor (linha vertical mais alta que os dígitos)
+    for x in range(w):
+        if sum(escuro[y][x] for y in range(h)) >= altura_cursor:
+            for y in range(h):
+                escuro[y][x] = False
+    colunas = [any(escuro[y][x] for y in range(h)) for x in range(w)]
+    linhas = [y for y in range(h) if any(escuro[y])]
+    if not linhas:
+        return ""
+    y0, y1 = linhas[0], linhas[-1]
+    texto, x = "", 0
+    while x < w:
+        if not colunas[x]:
+            x += 1
+            continue
+        x0 = x
+        while x < w and colunas[x]:
+            x += 1
+        desenho = tuple("".join("#" if escuro[y][c] else "." for c in range(x0, x))
+                        for y in range(y0, y1 + 1))
+        texto += next((d for d, gl in GLIFOS.items() if gl == desenho), "?")
+    return texto
+
+
 class Tela:
     def __init__(self, cfg, log, parar_evento=None):
         self.cfg = cfg
@@ -154,6 +198,10 @@ class Tela:
         if digitos:
             txt = re.sub(r"[^0-9]", "", txt.replace("o", "0").replace("l", "1").replace("i", "1"))
         return txt
+
+    def ler_numero(self, regiao):
+        self.checar()
+        return numero_de_imagem(pyautogui.screenshot(region=self.regiao(regiao)))
 
     def esperar(self, regiao, alvos, timeout, intervalo=1.5):
         """alvos = {"nome": ["trecho", ...]}. Retorna o nome do alvo que apareceu, ou None."""

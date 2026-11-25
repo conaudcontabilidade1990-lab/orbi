@@ -37,7 +37,7 @@ class GerarParcelas(Rotina):
     def _ler_campo(self, t, regiao, esperado, tentativas=3):
         lido = ""
         for _ in range(tentativas):  # o Domínio às vezes demora a redesenhar o campo
-            lido = t.ler(regiao, digitos=True)
+            lido = t.ler_numero(regiao)
             if lido == esperado:
                 break
             t.dormir(1)
@@ -52,7 +52,9 @@ class GerarParcelas(Rotina):
         t.clicar("venc_dropdown", espera=1)
         t.clicar("venc_informar", espera=1)
         t.clicar("campo_dias", triplo=True, espera=0.3)
-        t.digitar(self.dias, espera=1.5)
+        t.digitar(self.dias, espera=0.5)
+        t.teclas("tab")          # tira o cursor do campo e confirma o valor
+        t.dormir(1.2)
 
         erros = []
         venc = t.ler("campo_vencimento")

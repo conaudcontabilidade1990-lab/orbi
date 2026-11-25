@@ -12,7 +12,7 @@ PASTA = Path(os.environ.get("APPDATA", Path.home())) / "Orbi"
 PASTA_LOGS = PASTA / "logs"
 ARQUIVO = PASTA / "config.json"
 
-ESQUEMA = 3  # sobe quando pontos/regiões padrão mudam; ajustes antigos são descartados
+ESQUEMA = 4  # sobe quando pontos/regiões padrão mudam; ajustes antigos são descartados
 
 PADRAO = {
     "resolucao": [1366, 768],
@@ -49,9 +49,9 @@ PADRAO = {
         "empresa_ativa": [1150, 60, 216, 52],   # "ADEMIR BELTRANI - 611" (normal ou com janela maximizada)
         "troca_linha": [455, 289, 440, 18],     # 1ª linha (destacada) da Troca de empresas
         "dialogo_gerar": [294, 190, 782, 400],
-        "campo_parcelas": [468, 323, 44, 16],
+        "campo_parcelas": [469, 324, 42, 14],  # interior do campo, sem borda e setas
         "campo_vencimento": [468, 346, 110, 17],
-        "campo_dias": [468, 370, 44, 17],
+        "campo_dias": [469, 371, 42, 14],
         "botao_buscar": [1262, 679, 100, 20],
     },
     # Preferências da tela

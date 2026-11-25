@@ -36,6 +36,9 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt "pyinstaller>=6.9"
 
+      - name: Teste da leitura de números
+        run: python tests/test_numeros.py
+
       - name: Teste do OCR (Python)
         run: |
           python main.py --testar-ocr
