@@ -15,7 +15,7 @@ from PIL import Image, ImageOps
 from . import config as cfgmod
 
 pyautogui.FAILSAFE = True
-pyautogui.PAUSE = 0.15
+pyautogui.PAUSE = 0.04
 
 
 class Parar(Exception):
@@ -234,7 +234,7 @@ class Tela:
 
     def digitar(self, texto, espera=None):
         self.checar()
-        pyautogui.typewrite(str(texto), interval=0.05)
+        pyautogui.typewrite(str(texto), interval=0.02)
         self.dormir(self.T["pausa"] if espera is None else espera)
 
     def teclas(self, *teclas):
@@ -280,7 +280,22 @@ class Tela:
                 return int(x0 + x + lw / 2), int(y0 + y + lh / 2)
         return None
 
-    def esperar(self, regiao, alvos, timeout, intervalo=1.5):
+    def aguardar(self, condicao, timeout, intervalo=0.25):
+        """Repete a conferência até dar certo ou acabar o tempo (segue assim que a tela muda)."""
+        fim = time.time() + timeout
+        while True:
+            r = condicao()
+            if r or time.time() >= fim:
+                return r
+            self.dormir(intervalo)
+
+    def tem_linhas(self, regiao="lista_1a_linha", minimo=12):
+        """A lista de notas tem pelo menos uma linha preenchida? (texto escuro na 1ª linha)"""
+        self.checar()
+        img = ImageOps.grayscale(pyautogui.screenshot(region=self.regiao(regiao)))
+        return sum(1 for p in img.getdata() if p < 100) >= minimo
+
+    def esperar(self, regiao, alvos, timeout, intervalo=0.4):
         """alvos = {"nome": ["trecho", ...]}. Retorna o nome do alvo que apareceu, ou None."""
         fim = time.time() + timeout
         while time.time() < fim:

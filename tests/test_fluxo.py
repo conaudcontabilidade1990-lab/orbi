@@ -27,10 +27,13 @@ class Dominio:
         self.cl, self.janela, self.dlg, self.filtro, self.ba = [], False, False, False, False
         self.dias, self.empresa, self.caixa1, self.caixa2 = "", "315", False, True
         self.avisos, self.gerados = [], []
+        self.tempo = 0.0
+        self._buscou = False
         self.log = lambda m: None
 
     # ações
-    def clicar(self, n, **k):
+    def clicar(self, n, espera=None, **k):
+        self.tempo += self.T["pausa"] if espera is None else espera
         self.cl.append(n)
         if n == "caixa_sem_parcelas": self.caixa1 = not self.caixa1
         if n == "caixa_nao_geram": self.caixa2 = not self.caixa2
@@ -39,7 +42,9 @@ class Dominio:
         if n == "troca_acessar": self.empresa = self._cod
         if n == "busca_avancada": self.ba = True
         if n == "ba_cancelar": self.ba = False
-        if n == "ba_ok": self.ba, self.filtro = False, True
+        if n == "ba_ok": self.ba, self.filtro, self._buscou = False, True, True
+        if n == "buscar": self._buscou = True
+        if n in ("btn_ok_vazio", "fechar_janela"): self._buscou = False
         if n == "gerar_abrir": self.dlg = True
         if n == "dlg_cancelar": self.dlg = False
         if n == "btn_sim":
@@ -49,12 +54,18 @@ class Dominio:
             self.dlg = False
 
     def duplo(self, *a, **k): pass
+    def _tem(self):
+        return self.n2554 if self.filtro else self.ndemais
+    def tem_linhas(self, *a): return bool(self._buscou and self._tem())
     def digitar(self, txt, **k):
         txt = str(txt)
         if self.cl and self.cl[-1] == "troca_busca": self._cod = txt
         if self.cl and self.cl[-1] == "campo_dias": self.dias = txt
     def teclas(self, *a): pass
-    def dormir(self, s): pass
+    def dormir(self, s): self.tempo += s
+    def aguardar(self, cond, timeout, intervalo=0.25):
+        r = cond()
+        return r
     def checar(self): pass
     def caixa_marcada(self, p): return self.caixa1 if p == "caixa_sem_parcelas" else self.caixa2
     def escuros(self, p): return 20 if p == "radio_somente" else 2
@@ -72,6 +83,7 @@ class Dominio:
                 "ba_titulo": "busca avangada" if self.ba else "",
                 "ba_linha": "acumulador igual a 2554",
                 "campo_vencimento": "informar",
+                "mensagem": "nao foram encontrados registros" if (self._buscou and not self._tem()) else "",
                 "dialogo_gerar": "quantidade de parcelas vencimento" if self.dlg else ""}.get(r, "")
     def esperar(self, r, alvos, timeout, intervalo=1):
         if "ok" in alvos: return "ok" if self.ler(r) else None
@@ -85,6 +97,7 @@ class Dominio:
 ent = ROT["entradas"]
 # 2554 e demais: gera 25 dias filtrado, depois 1 dia sem filtro
 dm = Dominio(); print(ent.executar_empresa(dm, "52", False)); assert dm.gerados == [(True, "25"), (False, "1")], dm.gerados
+print(f"  espera fixa somada (Entradas, 2 passadas + conferências): {dm.tempo:.1f} s")
 assert not dm.caixa2 and dm.caixa1, "caixas fora do estado exigido"
 # só demais
 dm = Dominio(tem_2554=False); print(ent.executar_empresa(dm, "52", False)); assert dm.gerados == [(False, "1")]
@@ -101,4 +114,7 @@ except Parar as e:
 # Saídas continua igual
 sai = ROT["saidas"]
 dm = Dominio(tem_2554=False, menu="saidas"); print(sai.executar_empresa(dm, "667", False)); assert dm.gerados == [(False, "1")]
+print(f"  espera fixa somada (Saídas com notas): {dm.tempo:.1f} s")
+dm = Dominio(False, False, menu="saidas"); print(sai.executar_empresa(dm, "667", False))
+print(f"  espera fixa somada (Saídas sem notas): {dm.tempo:.1f} s")
 print("ok: fluxos das rotinas")

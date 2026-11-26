@@ -13,8 +13,10 @@ MSG = {
 
 
 def trazer_para_frente(t):
-    """Acha o Domínio (mesmo atrás de outra janela, minimizado ou no outro monitor), maximiza no
-    monitor principal e confere pelo título lido na tela. Testa as candidatas uma a uma."""
+    """Garante o Domínio na frente, maximizado no monitor principal. Se já estiver, segue direto;
+    senão acha a janela (mesmo atrás de outra, minimizada ou no outro monitor) e confere pelo título."""
+    if "dominio escrita fiscal" in t.ler("titulo_app"):
+        return
     from . import janela
     candidatas, diag = janela.achar()
     if not candidatas:
@@ -24,12 +26,12 @@ def trazer_para_frente(t):
     for hwnd in candidatas[:4]:
         t.checar()
         janela.trazer_para_frente(hwnd)
-        t.clicar("titulo_app", espera=1)   # já maximizado no principal: o título fica neste ponto
-        lido = t.ler("titulo_app")
-        if "dominio escrita fiscal" in lido:
+        t.clicar("titulo_app", espera=0.3)   # já maximizado no principal: o título fica neste ponto
+        lido = t.aguardar(lambda: (lambda x: x if "dominio escrita fiscal" in x else "")(t.ler("titulo_app")), 2)
+        if lido:
             return
     raise Parar("Não consegui trazer o Domínio Escrita Fiscal para a frente "
-                f"(título lido: '{lido}').")
+                f"(título lido: '{t.ler('titulo_app')}').")
 
 
 def empresa_ativa_e(t, codigo):
@@ -49,33 +51,24 @@ def trocar_empresa(t, codigo):
         t.log(f"  empresa {codigo} já está ativa")
         return
     espera = t.T.get("troca", 8)
-    t.clicar("troca_empresa", espera=1)
-    if t.esperar("troca_titulo", {"ok": ["troca de empresa"]}, espera, intervalo=0.7) != "ok":
+    t.clicar("troca_empresa", espera=0.2)
+    if t.esperar("troca_titulo", {"ok": ["troca de empresa"]}, espera, intervalo=0.25) != "ok":
         if t.esperar("mensagem", {"x": MSG["fechar_janelas"]}, 1):
             raise Parar("O Domínio pediu para fechar todas as janelas antes de trocar de empresa.")
         raise Parar("A janela Troca de empresas não abriu.")
     t.clicar("troca_por_codigo")          # a busca pode estar em "Apelido"
     t.clicar("troca_busca")
     t.teclas("ctrl", "a")
-    t.digitar(codigo, espera=1)
-    padrao = re.compile(rf"\s*{re.escape(codigo)}(?!\d)")
-    xa = t.P["troca_amostra_azul"][0]
-    fim = time.time() + 4                # o Domínio às vezes demora a redesenhar a lista
-    linha = t.ler_linha_destacada("troca_lista", xa)
-    while not padrao.match(linha) and time.time() < fim:
-        t.dormir(0.7)
-        linha = t.ler_linha_destacada("troca_lista", xa)
-    if not padrao.match(linha):
-        # a leitura de texto branco sobre azul falha às vezes; quem decide é o canto da tela
+    t.digitar(codigo, espera=0.6)
+    # a linha azul é só uma prévia (o OCR lê mal branco sobre azul); quem decide é o canto da tela
+    linha = t.ler_linha_destacada("troca_lista", t.P["troca_amostra_azul"][0])
+    if not re.match(rf"\s*{re.escape(codigo)}(?!\d)", linha):
         t.aviso(f"linha selecionada lida como '{linha}'; confirmei pelo canto da tela")
-    t.clicar("troca_acessar", espera=3)
-    fim = time.time() + espera
-    while not empresa_ativa_e(t, codigo):
-        if time.time() > fim:
-            raise Parar(f"A empresa ativa não ficou {codigo} (lido no canto: '{t.ler('empresa_ativa')}' / "
-                        f"'{t.ler('empresa_codigo', fator=4, binarizar=True, borda=12)}'). "
-                        "Confira se o código existe e está ativo. Nada foi feito nessa empresa.")
-        t.dormir(1)
+    t.clicar("troca_acessar", espera=0.5)
+    if not t.aguardar(lambda: empresa_ativa_e(t, codigo), espera, intervalo=0.4):
+        raise Parar(f"A empresa ativa não ficou {codigo} (lido no canto: '{t.ler('empresa_ativa')}' / "
+                    f"'{t.ler('empresa_codigo', fator=4, binarizar=True, borda=12)}'). "
+                    "Confira se o código existe e está ativo. Nada foi feito nessa empresa.")
     t.log(f"  empresa {codigo} ativa")
 
 
@@ -86,19 +79,21 @@ def janela_maximizada(t, palavra_titulo):
 
 def abrir_gerar_parcelas(t, ponto_menu, palavra_titulo):
     """Utilitários > Parcelas > Gerar Parcelas > (Entradas/Saídas/Serviços), maximizada."""
-    t.clicar("menu_utilitarios", espera=1)
-    t.clicar("menu_parcelas", espera=1)
-    t.clicar("menu_gerar", espera=1)
-    t.clicar(ponto_menu, espera=2.5)
-    if not janela_maximizada(t, palavra_titulo):
-        x, y = t.P["titulo_janela_normal"]
-        t.duplo(x, y, espera=2)
-    if not janela_maximizada(t, palavra_titulo):
-        # a janela abriu em outra posição: acha o título dela na tela e dá duplo clique
-        pos = t.achar_texto("gerar parcelas de notas")
-        if pos:
-            t.duplo(*pos, espera=2)
-    if not janela_maximizada(t, palavra_titulo):
+    t.clicar("menu_utilitarios", espera=0.5)
+    t.clicar("menu_parcelas", espera=0.5)
+    t.clicar("menu_gerar", espera=0.5)
+    t.clicar(ponto_menu, espera=0.3)
+    if t.aguardar(lambda: janela_maximizada(t, palavra_titulo), 4):
+        return
+    x, y = t.P["titulo_janela_normal"]
+    t.duplo(x, y, espera=0.3)
+    if t.aguardar(lambda: janela_maximizada(t, palavra_titulo), 2):
+        return
+    # a janela abriu em outra posição: acha o título dela na tela e dá duplo clique
+    pos = t.achar_texto("gerar parcelas de notas")
+    if pos:
+        t.duplo(*pos, espera=0.3)
+    if not t.aguardar(lambda: janela_maximizada(t, palavra_titulo), 2):
         raise Parar(f"A janela Gerar Parcelas ({palavra_titulo}) não abriu maximizada "
                     f"(título lido: '{t.ler('titulo_app')}').")
 
@@ -112,4 +107,5 @@ def garantir_caixa(t, ponto, marcada):
 
 
 def fechar_janela(t):
-    t.clicar("fechar_janela", espera=1.5)
+    t.clicar("fechar_janela", espera=0.3)
+    t.aguardar(lambda: "gerar parcelas" not in t.ler("titulo_app"), 3)

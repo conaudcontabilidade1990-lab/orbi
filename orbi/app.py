@@ -683,7 +683,7 @@ class App:
         email = self.usuario.email
         self.log(f"=== {rot.nome} | {len(empresas)} empresa(s) | {'SIMULAÇÃO' if simular else 'GERAÇÃO REAL'}"
                  f" | usuário: {email}")
-        self.log("Começando em 5 s — deixe o Escrita Fiscal aberto e não mexa no mouse.")
+        self.log("Começando em 3 s — deixe o Escrita Fiscal aberto e não mexa no mouse.")
         self.fila.put(("janela", "minimizar"))
 
         def registrar(cod, status, texto):
@@ -694,7 +694,7 @@ class App:
                 pass
 
         try:
-            t.dormir(5)
+            t.dormir(3)
             t.conferir_resolucao()
             for i, cod in enumerate(empresas, 1):
                 self.log(f"Empresa {cod} ({i}/{len(empresas)})")

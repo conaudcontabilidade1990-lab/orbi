@@ -29,10 +29,22 @@ class GerarParcelas(Rotina):
         rotulo = t.ler("botao_buscar")
         if "buscar" not in rotulo:
             raise Parar(f"O botão Buscar não está disponível (lido: '{rotulo}').")
-        t.clicar("buscar", espera=1)
-        if t.esperar("mensagem", {"vazio": d.MSG["vazio"]}, t.T["busca"]) == "vazio":
-            t.clicar("btn_ok_vazio", espera=1)
+        t.clicar("buscar", espera=0.2)
+        return self._resultado_busca(t)
+
+    def _resultado_busca(self, t):
+        """Segue assim que aparecer a mensagem de lista vazia OU a primeira linha de notas."""
+        def estado():
+            if any(x in t.ler("mensagem") for x in d.MSG["vazio"]):
+                return "vazio"
+            return "lista" if t.tem_linhas() else ""
+        r = t.aguardar(estado, t.T["busca"], intervalo=0.3)
+        if r == "vazio":
+            t.clicar("btn_ok_vazio", espera=0.4)
             return "vazio"
+        if r != "lista":
+            raise Parar("A busca não terminou no tempo limite (nem lista, nem mensagem). Nada foi gerado.")
+        t.dormir(0.6)  # deixa a lista terminar de desenhar antes do Todos
         return "lista"
 
     def _ler_campo(self, t, regiao, esperado, tentativas=3):
@@ -41,22 +53,23 @@ class GerarParcelas(Rotina):
             lido = t.ler_numero(regiao)
             if lido == esperado:
                 break
-            t.dormir(1)
+            t.dormir(0.5)
         return lido
 
     def _configurar_dialogo(self, t, dias=None):
         dias = self.dias if dias is None else dias
-        t.clicar("todos", espera=1.2)
-        t.clicar("gerar_abrir", espera=2)
-        texto = t.ler("dialogo_gerar")
+        t.clicar("todos", espera=0.6)
+        t.clicar("gerar_abrir", espera=0.2)
+        texto = t.aguardar(lambda: (lambda x: x if "quantidade de parcelas" in x else "")(t.ler("dialogo_gerar")), 8) \
+            or t.ler("dialogo_gerar")
         if "vencimento" not in texto or "quantidade de parcelas" not in texto:
             raise Parar(f"O diálogo de geração não apareceu como esperado (lido: '{texto[:120]}').")
-        t.clicar("venc_dropdown", espera=1)
-        t.clicar("venc_informar", espera=1)
-        t.clicar("campo_dias", triplo=True, espera=0.3)
-        t.digitar(dias, espera=0.5)
+        t.clicar("venc_dropdown", espera=0.5)
+        t.clicar("venc_informar", espera=0.5)
+        t.clicar("campo_dias", triplo=True, espera=0.25)
+        t.digitar(dias, espera=0.2)
         t.teclas("tab")          # tira o cursor do campo e confirma o valor
-        t.dormir(1.2)
+        t.dormir(0.5)
 
         erros = []
         venc = t.ler("campo_vencimento")
@@ -74,14 +87,14 @@ class GerarParcelas(Rotina):
             raise Parar("Diálogo com valores diferentes do esperado: " + "; ".join(erros))
 
     def _gerar(self, t):
-        t.clicar("dlg_gerar", espera=1.5)
+        t.clicar("dlg_gerar", espera=0.2)
         if t.esperar("mensagem", {"certeza": d.MSG["certeza"]}, t.T["confirmacao"]) != "certeza":
             raise Parar("Não apareceu a confirmação 'Você tem certeza...' — não cliquei em nada.")
-        t.clicar("btn_sim", espera=2)
+        t.clicar("btn_sim", espera=0.3)
         t.log("  gerando... aguardando a mensagem de sucesso")
-        if t.esperar("mensagem", {"sucesso": d.MSG["sucesso"]}, t.T["sucesso"], intervalo=3) != "sucesso":
+        if t.esperar("mensagem", {"sucesso": d.MSG["sucesso"]}, t.T["sucesso"], intervalo=0.8) != "sucesso":
             raise Parar("Não vi 'Parcelas geradas com sucesso.' no tempo limite. NÃO gerei de novo.")
-        t.clicar("btn_ok_sucesso", espera=1.5)
+        t.clicar("btn_ok_sucesso", espera=0.6)
 
     # ---- por empresa ----
     def executar_empresa(self, t, codigo, simular):
@@ -96,13 +109,13 @@ class GerarParcelas(Rotina):
         self._configurar_dialogo(t)
         if simular:
             t.foto(f"simulacao_{codigo}")
-            t.clicar("dlg_cancelar", espera=1)
+            t.clicar("dlg_cancelar", espera=0.5)
             d.fechar_janela(t)
             return "SIMULAÇÃO ok — diálogo conferido e cancelado, nada gerado"
 
         self._gerar(t)
         if "quantidade de parcelas" in t.ler("dialogo_gerar"):
-            t.clicar("dlg_cancelar", espera=1)
+            t.clicar("dlg_cancelar", espera=0.5)
         # conferência: fecha, reabre e busca de novo — deve vir vazio
         d.fechar_janela(t)
         d.abrir_gerar_parcelas(t, self.ponto_menu, self.palavra_titulo)
@@ -141,24 +154,21 @@ class GerarParcelasEntradas(GerarParcelas):
 
     def _busca_2554(self, t):
         self._caixas(t)
-        t.clicar("busca_avancada", espera=1.5)
-        if t.esperar("ba_titulo", {"ok": ["busca avan"]}, 6, intervalo=0.7) != "ok":
+        t.clicar("busca_avancada", espera=0.2)
+        if t.esperar("ba_titulo", {"ok": ["busca avan"]}, 6, intervalo=0.25) != "ok":
             raise Parar("A janela Busca avançada não abriu.")
-        t.clicar("ba_coluna", espera=0.6)
-        t.digitar("a", espera=1)                 # "Acumulador" é a única coluna com A
-        t.clicar("ba_valor", triplo=True, espera=0.4)
-        t.digitar(self.ACUMULADOR, espera=1)
+        t.clicar("ba_coluna", espera=0.4)
+        t.digitar("a", espera=0.6)               # "Acumulador" é a única coluna com A
+        t.clicar("ba_valor", triplo=True, espera=0.3)
+        t.digitar(self.ACUMULADOR, espera=0.5)
         linha = t.ler("ba_linha")
         compacta = linha.replace(" ", "")
         if "acumulador" not in linha or "iguala" not in compacta or self.ACUMULADOR not in compacta:
-            t.clicar("ba_cancelar", espera=1)
+            t.clicar("ba_cancelar", espera=0.5)
             raise Parar(f"Não consegui montar o filtro 'Acumulador igual a {self.ACUMULADOR}' "
                         f"(lido: '{linha}'). Nada foi gerado.")
-        t.clicar("ba_ok", espera=1)
-        if t.esperar("mensagem", {"vazio": d.MSG["vazio"]}, t.T["busca"]) == "vazio":
-            t.clicar("btn_ok_vazio", espera=1)
-            return "vazio"
-        return "lista"
+        t.clicar("ba_ok", espera=0.2)
+        return self._resultado_busca(t)
 
     def _reabrir(self, t):
         d.fechar_janela(t)
@@ -166,7 +176,7 @@ class GerarParcelasEntradas(GerarParcelas):
 
     def _cancelar_dialogo_aberto(self, t):
         if "quantidade de parcelas" in t.ler("dialogo_gerar"):
-            t.clicar("dlg_cancelar", espera=1)
+            t.clicar("dlg_cancelar", espera=0.5)
 
     def executar_empresa(self, t, codigo, simular):
         d.trazer_para_frente(t)
@@ -179,7 +189,7 @@ class GerarParcelasEntradas(GerarParcelas):
             self._configurar_dialogo(t, self.DIAS_2554)
             if simular:
                 t.foto(f"simulacao_{codigo}_2554")
-                t.clicar("dlg_cancelar", espera=1)
+                t.clicar("dlg_cancelar", espera=0.5)
                 feitos.append("2554: diálogo com 25 dias conferido")
             else:
                 self._gerar(t)
@@ -196,7 +206,7 @@ class GerarParcelasEntradas(GerarParcelas):
             self._configurar_dialogo(t, self.dias)
             if simular:
                 t.foto(f"simulacao_{codigo}_demais")
-                t.clicar("dlg_cancelar", espera=1)
+                t.clicar("dlg_cancelar", espera=0.5)
                 feitos.append("demais: diálogo com 1 dia conferido")
             else:
                 self._gerar(t)

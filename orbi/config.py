@@ -12,13 +12,13 @@ PASTA = Path(os.environ.get("APPDATA", Path.home())) / "Orbi"
 PASTA_LOGS = PASTA / "logs"
 ARQUIVO = PASTA / "config.json"
 
-ESQUEMA = 8  # sobe quando pontos/regiões padrão mudam; ajustes antigos são descartados
+ESQUEMA = 9  # sobe quando pontos/regiões padrão mudam; ajustes antigos são descartados
 
 PADRAO = {
     "resolucao": [1366, 768],
     "idioma_ocr": "pt-BR",
     "tempos": {
-        "pausa": 0.7,           # segundos entre ações
+        "pausa": 0.35,          # segundos entre ações
         "busca": 8,
         "troca": 8,             # espera a janela/lista da Troca de empresas atualizar             # espera a lista/mensagem após Buscar
         "confirmacao": 15,      # espera o "Você tem certeza..."
@@ -58,6 +58,7 @@ PADRAO = {
         "campo_vencimento": [468, 346, 110, 17],
         "campo_dias": [469, 371, 42, 14],
         "botao_buscar": [1262, 679, 100, 20],
+        "lista_1a_linha": [40, 282, 560, 15],    # 1ª linha da lista de notas (janela maximizada)
         "ba_titulo": [372, 281, 250, 16],        # "Busca avançada"
         "ba_linha": [394, 347, 474, 18],         # Coluna | Condição | Valor da 1ª linha do filtro
     },
