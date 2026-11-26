@@ -61,6 +61,9 @@ jobs:
       - name: Teste do OCR em telas do Domínio
         run: python tests/test_ocr_real.py
 
+      - name: Teste da separação de XML
+        run: python tests/test_xmls.py
+
       - name: Teste das janelas abertas (tela real)
         run: python tests/test_janelas.py
 

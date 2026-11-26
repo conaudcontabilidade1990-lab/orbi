@@ -17,6 +17,8 @@ class Rotina:
     precisa_regioes = ()          # regiões que precisam estar calibradas para rodar de verdade
     usa_competencia = False       # mostra "competência de/até" na tela; vem em self.competencia
     competencia = None            # ((ano, mês) inicial, (ano, mês) final) quando usa_competencia
+    usa_dominio = True            # False: não mexe na tela (não minimiza o Orbi nem espera o Domínio)
+    usa_pasta_xml = False         # mostra "Pasta dos XML" na tela; vem em self.pasta_base
 
     def executar_empresa(self, t, codigo, simular):
         """Executa a rotina para uma empresa e devolve o texto do resultado.

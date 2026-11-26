@@ -5,9 +5,11 @@ e acrescente uma instância na lista ROTINAS abaixo. Ela aparece sozinha na tela
 """
 from .base import Rotina, Resultado  # noqa: F401
 from .parcelas import GerarParcelas, GerarParcelasEntradas
+from .xml_hub import SepararXml
 
 ROTINAS = [
     GerarParcelasEntradas(),
     GerarParcelas("saidas", "Gerar parcelas — Saídas", "menu_saidas", "saidas"),
     GerarParcelas("servicos", "Gerar parcelas — Serviços", "menu_servicos", "servicos"),
+    SepararXml(),
 ]

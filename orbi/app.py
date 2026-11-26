@@ -428,8 +428,18 @@ class App:
         self.lbl_comp = ctk.CTkLabel(self.fr_comp, text="", font=fonte(11), text_color=COR["suave"])
         self.lbl_comp.pack(side="left", padx=10)
 
+        self.fr_pasta = ctk.CTkFrame(f, fg_color="transparent")
+        ctk.CTkLabel(self.fr_pasta, text="PASTA DOS XML", font=fonte(12, "bold"), text_color=COR["suave"]).pack(side="left")
+        self.var_pasta_xml = tk.StringVar(value=self.cfg.get("pasta_xml") or self._pasta_xml_padrao())
+        ctk.CTkEntry(self.fr_pasta, textvariable=self.var_pasta_xml, height=32, corner_radius=8, font=fonte(12),
+                     fg_color=COR["caixa"], border_color=COR["borda"]).pack(side="left", fill="x", expand=True, padx=(12, 6))
+        ctk.CTkButton(self.fr_pasta, text="…", width=36, height=32, corner_radius=8, fg_color=COR["borda"],
+                      hover_color=COR["trilho"], text_color=COR["texto"], command=self._escolher_pasta_xml).pack(side="left")
+        self._acoes_antes = None
+
         acoes = ctk.CTkFrame(f, fg_color="transparent")
         acoes.pack(fill="x")
+        self._acoes_antes = acoes
         self.var_simular = tk.BooleanVar(value=True)
         ctk.CTkSwitch(acoes, text="Simular (vai até o diálogo e cancela)", variable=self.var_simular,
                       font=fonte(12), text_color=COR["texto"], progress_color=COR["advertencia"]).pack(side="left")
@@ -485,6 +495,22 @@ class App:
             for en in self.ent_comp:
                 en.configure(state="normal" if usa else "disabled")
             self.lbl_comp.configure(text="" if usa else "(não usada)")
+        if getattr(self, "_acoes_antes", None) is not None:
+            if r and r.usa_pasta_xml:
+                self.fr_pasta.pack(fill="x", pady=(0, 10), before=self._acoes_antes)
+            else:
+                self.fr_pasta.pack_forget()
+
+    @staticmethod
+    def _pasta_xml_padrao():
+        return str(Path.home() / "Desktop" / "Configuração HubStrom")
+
+    def _escolher_pasta_xml(self):
+        from tkinter import filedialog
+        p = filedialog.askdirectory(initialdir=self.var_pasta_xml.get() or str(Path.home()),
+                                    title="Pasta base dos XML (HubStrom)")
+        if p:
+            self.var_pasta_xml.set(str(Path(p)))
 
     @staticmethod
     def _competencia_padrao():
@@ -748,6 +774,8 @@ class App:
                                        "GERANDO DE VERDADE?", icon="warning"):
             return
         rot.competencia = agenda.competencia_de(ag.get("competencia")) if rot.usa_competencia else None
+        if rot.usa_pasta_xml:
+            rot.pasta_base = self.cfg.get("pasta_xml") or self._pasta_xml_padrao()
         self.nomes_exec = nomes
         self.agendamento_atual = ag
         self.mostrar("executar")
@@ -1015,6 +1043,13 @@ class App:
                                                "(a inicial não pode ser depois da final).")
                 return
             competencia = (ci, cf)
+        if rot.usa_pasta_xml:
+            pasta = self.var_pasta_xml.get().strip()
+            if not Path(pasta).is_dir():
+                messagebox.showwarning("Orbi", f"A pasta dos XML não existe:\n{pasta}")
+                return
+            rot.pasta_base = pasta
+            self.cfg["pasta_xml"] = pasta
         if any(not e.isdigit() for e in empresas):
             messagebox.showwarning("Orbi", "Use só códigos numéricos de empresa.")
             return
@@ -1110,8 +1145,9 @@ class App:
         if rot.competencia:
             (a1, m1), (a2, m2) = rot.competencia
             self.log(f"Competência: {m1:02d}/{a1} a {m2:02d}/{a2}")
-        self.log("Começando em 3 s — deixe o Escrita Fiscal aberto e não mexa no mouse.")
-        self.fila.put(("janela", "minimizar"))
+        if rot.usa_dominio:
+            self.log("Começando em 3 s — deixe o Escrita Fiscal aberto e não mexa no mouse.")
+            self.fila.put(("janela", "minimizar"))
 
         def registrar(cod, status, texto):
             self.fila.put(("resultado", (cod, status)))
@@ -1121,8 +1157,9 @@ class App:
                 pass
 
         try:
-            t.dormir(3)
-            t.conferir_resolucao()
+            if rot.usa_dominio:
+                t.dormir(3)
+                t.conferir_resolucao()
             seguidas = 0
             for i, cod in enumerate(empresas, 1):
                 nome = getattr(self, "nomes_exec", {}).get(cod, "")
