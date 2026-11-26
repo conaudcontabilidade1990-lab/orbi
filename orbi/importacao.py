@@ -147,7 +147,10 @@ def escolher_pasta(t, xis, pasta_dominio, esperado):
         t.apagar(160)                      # apaga tudo (Shift+Home falha às vezes no Domínio remoto)
         if len(_so(t.ler("sel_campo"))) > 2:
             t.apagar(160)
-        t.colar(pasta_dominio, espera=1.0 + tentativa)
+        if pasta_dominio.isascii() and tentativa != 1:
+            t.digitar(pasta_dominio, espera=0.5)   # digitado tecla a tecla (não depende da área de transferência)
+        else:
+            t.colar(pasta_dominio, espera=1.5)
         lido = _so(t.ler("sel_campo")).replace(" ", "")
         if alvo in lido:
             break

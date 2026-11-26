@@ -71,6 +71,9 @@ class Dom:
     def apagar(self, n):
         self.campo = ""
 
+    def digitar(self, texto, espera=None):
+        self.colar(texto)
+
     def colar(self, texto, espera=1.0):
         self.campo = texto.lower() if self.colagem_ok else "texto qualquer que estava copiado"
 
