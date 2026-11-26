@@ -60,7 +60,8 @@ def _processo(u, k, hwnd):
 
 
 def janelas_visiveis():
-    """[(hwnd, título, processo, área)] das janelas visíveis com título."""
+    """[(hwnd, título, processo, área)] das janelas visíveis com título — e também as sem título
+    dos processos do Domínio (o GraphOn AppController desenha a janela do Escrita Fiscal sem título)."""
     u, k = _api()
     lista = []
 
@@ -69,13 +70,17 @@ def janelas_visiveis():
         try:
             if u.IsWindowVisible(hwnd):
                 n = u.GetWindowTextLengthW(hwnd)
+                titulo = ""
                 if n:
                     buf = ctypes.create_unicode_buffer(n + 1)
                     u.GetWindowTextW(hwnd, buf, n + 1)
+                    titulo = buf.value
+                proc = _processo(u, k, hwnd)
+                if titulo or proc in PROCESSOS_DOMINIO:
                     r = wintypes.RECT()
                     u.GetWindowRect(hwnd, ctypes.byref(r))
                     area = max(0, r.right - r.left) * max(0, r.bottom - r.top)
-                    lista.append((hwnd, buf.value, _processo(u, k, hwnd), area))
+                    lista.append((hwnd, titulo, proc, area))
         except Exception:
             pass
         return True
@@ -84,19 +89,26 @@ def janelas_visiveis():
     return lista
 
 
+AREA_MINIMA = 400 * 300   # janela principal do Domínio, não caixas pequenas
+
+
 def achar():
-    """Retorna (hwnd, diagnóstico). hwnd=None se não achou."""
+    """Retorna (lista de hwnd candidatas em ordem, diagnóstico). Lista vazia se não achou.
+    Prioridade: título com 'escrita fiscal'; depois a maior janela do AppController/contabil
+    que não seja a 'Lista de Programas'. Quem chama confere pelo título lido na tela."""
     lista = janelas_visiveis()
     candidatas = []
     for hwnd, titulo, proc, area in lista:
         t = _norm(titulo)
-        if "escrita fiscal" in t or (proc in PROCESSOS_DOMINIO and "dominio" in t):
-            candidatas.append((("escrita fiscal" in t), area, hwnd))
+        if "escrita fiscal" in t:
+            candidatas.append((2, area, hwnd))
+        elif proc in PROCESSOS_DOMINIO and "lista de programas" not in t and area >= AREA_MINIMA:
+            candidatas.append((1, area, hwnd))
     if candidatas:
         candidatas.sort(reverse=True)
-        return candidatas[0][2], ""
-    diag = "; ".join(f"'{t[:40]}' ({p})" for _, t, p, a in lista if a > 0)[:600]
-    return None, diag
+        return [c[2] for c in candidatas], ""
+    diag = "; ".join(f"'{t[:40] or '(sem título)'}' ({p}, área {a})" for _, t, p, a in lista if a > 0)[:700]
+    return [], diag
 
 
 def trazer_para_frente(hwnd):

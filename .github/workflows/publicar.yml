@@ -46,7 +46,7 @@ jobs:
         run: python tests/test_login_firebase.py
 
       - name: Teste da busca de janelas
-        run: python -c "from orbi import janela; l = janela.janelas_visiveis(); print(len(l), 'janelas'); print(janela.achar())"
+        run: python -c "from orbi import janela; l = janela.janelas_visiveis(); print(len(l), 'janelas'); print(janela.achar()[1][:300])"
 
       - name: Teste do OCR (Python)
         run: |

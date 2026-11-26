@@ -13,18 +13,23 @@ MSG = {
 
 
 def trazer_para_frente(t):
-    """Acha o Domínio pelo título (mesmo atrás de outra janela, minimizado ou no outro monitor),
-    maximiza no monitor principal e confere pelo título lido na tela."""
+    """Acha o Domínio (mesmo atrás de outra janela, minimizado ou no outro monitor), maximiza no
+    monitor principal e confere pelo título lido na tela. Testa as candidatas uma a uma."""
     from . import janela
-    hwnd, diag = janela.achar()
-    if not hwnd:
+    candidatas, diag = janela.achar()
+    if not candidatas:
         raise Parar("Não encontrei a janela do Domínio Escrita Fiscal aberta. "
                     f"Janelas vistas: {diag}")
-    janela.trazer_para_frente(hwnd)
-    t.clicar("titulo_app", espera=1)   # já maximizado no principal: o título fica neste ponto
-    if "dominio escrita fiscal" not in t.ler("titulo_app"):
-        raise Parar("Não consegui trazer o Domínio Escrita Fiscal para a frente "
-                    f"(título lido: '{t.ler('titulo_app')}').")
+    lido = ""
+    for hwnd in candidatas[:4]:
+        t.checar()
+        janela.trazer_para_frente(hwnd)
+        t.clicar("titulo_app", espera=1)   # já maximizado no principal: o título fica neste ponto
+        lido = t.ler("titulo_app")
+        if "dominio escrita fiscal" in lido:
+            return
+    raise Parar("Não consegui trazer o Domínio Escrita Fiscal para a frente "
+                f"(título lido: '{lido}').")
 
 
 def empresa_ativa_e(t, codigo):
