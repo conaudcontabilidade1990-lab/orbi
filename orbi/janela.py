@@ -97,13 +97,16 @@ def achar():
     Prioridade: título com 'escrita fiscal'; depois a maior janela do AppController/contabil
     que não seja a 'Lista de Programas'. Quem chama confere pelo título lido na tela."""
     lista = janelas_visiveis()
+    u, _ = _api()
     candidatas = []
     for hwnd, titulo, proc, area in lista:
         t = _norm(titulo)
         if "escrita fiscal" in t:
             candidatas.append((2, area, hwnd))
-        elif proc in PROCESSOS_DOMINIO and "lista de programas" not in t and area >= AREA_MINIMA:
-            candidatas.append((1, area, hwnd))
+        elif proc in PROCESSOS_DOMINIO and "lista de programas" not in t:
+            minimizada = bool(u.IsIconic(hwnd))   # minimizada fica pequenininha: conta mesmo assim
+            if area >= AREA_MINIMA or minimizada:
+                candidatas.append((1, area if not minimizada else AREA_MINIMA, hwnd))
     if candidatas:
         candidatas.sort(reverse=True)
         return [c[2] for c in candidatas], ""
