@@ -12,7 +12,7 @@ PASTA = Path(os.environ.get("APPDATA", Path.home())) / "Orbi"
 PASTA_LOGS = PASTA / "logs"
 ARQUIVO = PASTA / "config.json"
 
-ESQUEMA = 10  # sobe quando pontos/regiões padrão mudam; ajustes antigos são descartados
+ESQUEMA = 11  # sobe quando pontos/regiões padrão mudam; ajustes antigos são descartados
 
 PADRAO = {
     "resolucao": [1366, 768],
@@ -30,6 +30,7 @@ PADRAO = {
         "titulo_app": [60, 12],
         "troca_empresa": [131, 93], "troca_por_codigo": [482, 199], "troca_busca": [603, 227],
         "troca_acessar": [703, 704], "troca_fechar": [875, 704], "troca_amostra_azul": [880, 300],
+        "troca_codigo_x": [470, 548],
         "menu_utilitarios": [495, 53], "menu_parcelas": [583, 441], "menu_gerar": [917, 443],
         "menu_entradas": [1055, 445], "menu_saidas": [1050, 468], "menu_servicos": [1053, 490],
         "titulo_janela_normal": [500, 217],   # duplo clique maximiza a janela Gerar Parcelas

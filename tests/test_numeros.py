@@ -55,3 +55,12 @@ for i, cod in ((0, "662"), (2, "667"), (6, "674"), (19, "708")):
     y0 = 289 + i * 19
     assert numero_de_imagem(tr.crop((470, y0 + 2, 548, y0 + 17))) == cod, (cod, numero_de_imagem(tr.crop((470, y0 + 2, 548, y0 + 17))))
 print("ok: valor da Busca avançada e dígitos 0-9")
+
+# código da linha azul (selecionada) pelo desenho: 665 na tela real
+from orbi.tela import codigo_da_linha_azul  # noqa: E402
+x, y, w, h = R["troca_lista"]
+P = config.PADRAO["pontos"]
+lista = tr.crop((x, y, x + w, y + h))
+cod = codigo_da_linha_azul(lista, P["troca_amostra_azul"][0] - x, P["troca_codigo_x"][0] - x, P["troca_codigo_x"][1] - x)
+assert cod == "665", cod
+print("ok: código da linha azul lido pelo desenho")

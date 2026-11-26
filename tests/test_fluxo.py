@@ -72,6 +72,7 @@ class Dominio:
     def foto(self, n): return types.SimpleNamespace(name=n)
     def aviso(self, m): self.avisos.append(m)
     def ler_linha_destacada(self, r, x): return f"{self._cod} empresa"
+    def ler_codigo_destacado(self, *a): return getattr(self, "lista_mostra", None) or self._cod
     def achar_texto(self, *a): return None
     def ler_numero(self, r):
         if r == "campo_parcelas": return "1"
@@ -119,6 +120,16 @@ dm = Dominio(tem_2554=False, menu="saidas"); print(sai.executar_empresa(dm, "667
 print(f"  espera fixa somada (Saídas com notas): {dm.tempo:.1f} s")
 dm = Dominio(False, False, menu="saidas"); print(sai.executar_empresa(dm, "667", False))
 print(f"  espera fixa somada (Saídas sem notas): {dm.tempo:.1f} s")
+# código que não existe: a lista mostra 90 -> pula sem nem acessar
+dm = Dominio(menu="saidas"); dm.lista_mostra = "90"
+try:
+    sai.executar_empresa(dm, "9", False); raise SystemExit("deveria pular")
+except Exception as e:
+    assert type(e).__name__ == "Pular", e
+    print("pulou sem acessar:", str(e)[:60]); assert "troca_acessar" not in dm.cl and not dm.gerados
+# leitura da linha falhou ('?'): acessa e confere pelo canto, sem advertência
+dm = Dominio(tem_2554=False, menu="saidas"); dm.lista_mostra = "6?5"
+print(sai.executar_empresa(dm, "611", False)); assert not dm.avisos, dm.avisos
 # código que não existe no Domínio: o Domínio acessa outra empresa -> Pular (nada feito)
 from orbi.tela import Pular  # noqa: E402
 dm = Dominio(menu="saidas"); dm.empresa_errada = "90"

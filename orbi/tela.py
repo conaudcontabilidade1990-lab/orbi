@@ -188,6 +188,17 @@ def numero_de_imagem(img, limiar=100, altura_cursor=11):
     return texto
 
 
+def codigo_da_linha_azul(img_lista, x_amostra, x0, x1):
+    """Código da linha selecionada (branco sobre azul) pelo desenho dos dígitos.
+    Coordenadas relativas à imagem da lista. '' se não achar a faixa azul."""
+    faixa = faixa_destacada(img_lista, x_amostra)
+    if not faixa:
+        return ""
+    y0, y1 = faixa
+    cod = img_lista.crop((x0, y0, x1, y1 + 1))
+    return numero_de_imagem(ImageOps.invert(ImageOps.grayscale(cod)))
+
+
 class Tela:
     def __init__(self, cfg, log, parar_evento=None):
         self.cfg = cfg
@@ -274,6 +285,12 @@ class Tela:
             return ""
         y0, y1 = faixa
         return norm(ocr_imagem(img.crop((0, y0, w, y1 + 1)), self.cfg["idioma_ocr"]))
+
+    def ler_codigo_destacado(self, regiao_lista, x_amostra, x0, x1):
+        self.checar()
+        x, y, w, h = self.regiao(regiao_lista)
+        img = pyautogui.screenshot(region=(x, y, w, h))
+        return codigo_da_linha_azul(img, x_amostra - x, x0 - x, x1 - x)
 
     def achar_texto(self, trecho, regiao=None):
         """Centro (x, y) na tela da primeira linha cujo texto contém o trecho; None se não achar."""

@@ -67,10 +67,22 @@ def trocar_empresa(t, codigo):
     t.clicar("troca_busca")
     t.teclas("ctrl", "a")
     t.digitar(codigo, espera=0.6)
-    # a linha azul é só uma prévia (o OCR lê mal branco sobre azul); quem decide é o canto da tela
-    linha = t.ler_linha_destacada("troca_lista", t.P["troca_amostra_azul"][0])
-    if not re.match(rf"\s*{re.escape(codigo)}(?!\d)", linha):
-        t.aviso(f"linha selecionada lida como '{linha}'; confirmei pelo canto da tela")
+    # código da linha selecionada, pelo desenho dos dígitos (o OCR lê mal branco sobre azul)
+    x0, x1 = t.P["troca_codigo_x"]
+    ler = lambda: t.ler_codigo_destacado("troca_lista", t.P["troca_amostra_azul"][0], x0, x1)  # noqa: E731
+    lido = t.aguardar(lambda: (lambda c: c if c == codigo else "")(ler()), 3, intervalo=0.3)
+    if not lido:
+        # outro código só conta se aparecer igual em duas leituras seguidas (a lista pode estar redesenhando)
+        primeiro = ler()
+        t.dormir(0.6)
+        lido = ler() if primeiro else ""
+        if lido != primeiro:
+            lido = ""
+    if lido and lido.isdigit() and lido != codigo:
+        # o Domínio não achou o código e posicionou na empresa mais próxima: não acessa
+        t.clicar("troca_fechar", espera=0.5)
+        raise Pular(f"O código {codigo} não está na lista de empresas do Domínio (a busca caiu na {lido}). "
+                    "Pode estar inativo ou não ser deste módulo. Não acessei nenhuma empresa.")
     t.clicar("troca_acessar", espera=0.5)
     if not t.aguardar(lambda: empresa_ativa_e(t, codigo), espera, intervalo=0.4):
         raise Pular(f"A empresa ativa não ficou {codigo} (lido no canto: '{t.ler('empresa_ativa')}' / "
