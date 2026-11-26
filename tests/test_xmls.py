@@ -80,5 +80,16 @@ with tempfile.TemporaryDirectory() as tmp:
     mk.executar_empresa(t, "494", simular=False)
     assert "nada novo" in r.executar_empresa(t, "494", simular=False).split("11/2026")[1]
 
+    from orbi.rotinas.xml_hub import ImportarXml
+    im = ImportarXml()
+    im.pasta_base, im.competencia = str(base), ((2026, 11), (2026, 11))
+    for i in (30,): (mes / f"{k('65', i)}.xml").write_text("<nfeProc/>")
+    manter, pulos = im.checagem(["494", "999"])
+    print("checagem:", manter, pulos)
+    assert manter == ["494"] and pulos == {"999": "sem pasta no HubStrom"}
+    xmls.separar(mes); xmls.marcar_importados(mes)
+    manter, pulos = im.checagem(["494"])
+    assert manter == [] and pulos == {"494": "nada novo para importar"}, (manter, pulos)
+
 assert agenda.competencia_de("anterior_atual", dt.date(2026, 1, 5)) == ((2025, 12), (2026, 1))
 print("ok: XML separados e zipados por tipo")

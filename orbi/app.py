@@ -1145,7 +1145,18 @@ class App:
         if rot.competencia:
             (a1, m1), (a2, m2) = rot.competencia
             self.log(f"Competência: {m1:02d}/{a1} a {m2:02d}/{a2}")
-        if rot.usa_dominio:
+        pulos = {}
+        if hasattr(rot, "checagem"):
+            try:
+                manter, pulos = rot.checagem(empresas)
+            except Exception as e:
+                manter, pulos = empresas, {}
+                self.log(f"(checagem prévia falhou: {e}; sigo com todas)")
+            self.log(f"Checagem prévia: {len(manter)} de {len(empresas)} empresa(s) têm algo a fazer; "
+                     f"{len(pulos)} pulada(s) sem abrir o Domínio.")
+            empresas = manter
+            self.total_exec = max(1, len(empresas))
+        if rot.usa_dominio and empresas:
             self.log("Começando em 3 s — deixe o Escrita Fiscal aberto e não mexa no mouse.")
             self.fila.put(("janela", "minimizar"))
 
@@ -1157,7 +1168,7 @@ class App:
                 pass
 
         try:
-            if rot.usa_dominio:
+            if rot.usa_dominio and empresas:
                 t.dormir(3)
                 t.conferir_resolucao()
             seguidas = 0
@@ -1202,6 +1213,7 @@ class App:
                 self.log(traceback.format_exc())
         feitas = {r.empresa for r in resultados}
         linhas = [f"{r.empresa}: {r.texto}" for r in resultados]
+        linhas += [f"{c}: pulada na checagem — {m}" for c, m in pulos.items()]
         linhas += [f"{c}: não processada" for c in empresas if c not in feitas]
         rel = cfgmod.PASTA_LOGS / f"relatorio_{dt.datetime.now():%Y%m%d_%H%M%S}.txt"
         try:

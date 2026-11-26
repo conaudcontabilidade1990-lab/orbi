@@ -144,8 +144,9 @@ def escolher_pasta(t, xis, pasta_dominio, esperado):
     for tentativa in range(3):
         t.clicar("sel_campo", espera=0.2)
         t.teclas("end")
-        t.teclas("shift", "home")
-        t.teclas("delete")
+        t.apagar(160)                      # apaga tudo (Shift+Home falha às vezes no Domínio remoto)
+        if len(_so(t.ler("sel_campo"))) > 2:
+            t.apagar(160)
         t.colar(pasta_dominio, espera=1.0 + tentativa)
         lido = _so(t.ler("sel_campo")).replace(" ", "")
         if alvo in lido:

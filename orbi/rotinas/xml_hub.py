@@ -98,6 +98,40 @@ class ImportarXml(SepararXml):
     usa_dominio = True
     precisa_regioes = ("sel_campo", "dlg_importacao")
 
+    def checagem(self, empresas):
+        """Antes de abrir o Domínio: só ficam as empresas com XML ainda não importado na competência.
+        Devolve (empresas a processar, {código: motivo} das puladas). Não grava nada."""
+        base = Path(self.pasta_base or "")
+        manter, pulos = [], {}
+        for cod in empresas:
+            emp = xmls.pasta_da_empresa(base, cod) if base.is_dir() else None
+            if not emp:
+                pulos[cod] = "sem pasta no HubStrom"
+                continue
+            pend = 0
+            for a, m in self.meses():
+                pasta_mes = emp / f"{m:02d}{a}"
+                if pasta_mes.is_dir():
+                    pend += xmls.pendentes(xmls.separar(pasta_mes, gravar=False))
+            if pend:
+                manter.append(cod)
+            else:
+                pulos[cod] = "nada novo para importar"
+        return manter, pulos
+
+    @staticmethod
+    def _pasta_curta(zip_, tipo):
+        """Copia o zip para C:\\Users\\Public\\OrbiImport\\<tipo> (caminho curto e sem acento: o campo
+        Caminho do Domínio corta textos longos e a área de transferência remota falha com acentos)."""
+        import os
+        import shutil
+        destino = Path(os.environ.get("PUBLIC", r"C:\Users\Public")) / "OrbiImport" / tipo
+        if destino.exists():
+            shutil.rmtree(destino, ignore_errors=True)
+        destino.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(zip_, destino / Path(zip_).name)
+        return destino
+
     def _no_dominio(self, t, caminho):
         """C:\\... deste computador -> unidade que o Domínio enxerga (padrão M:)."""
         p = str(caminho)
@@ -140,7 +174,8 @@ class ImportarXml(SepararXml):
             feitos = []
             for tp in tipos:
                 t.log(f"  {m:02d}/{a} · {tp}: importando {cont[tp][1]} XML…")
-                res = imp.importar_tipo(t, tp, self._no_dominio(t, pasta_mes / tp), f"{mmaaaa}\\{tp}", simular)
+                curta = self._pasta_curta(pasta_mes / tp / f"{tp}.zip", tp)
+                res = imp.importar_tipo(t, tp, self._no_dominio(t, curta), f"orbiimport\\{tp}", simular)
                 if not simular:
                     xmls.marcar_importados(pasta_mes, [tp])
                 feitos.append(f"{tp} ({cont[tp][1]}): " + " | ".join(res))

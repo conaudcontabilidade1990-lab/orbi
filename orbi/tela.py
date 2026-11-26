@@ -416,6 +416,12 @@ class Tela:
         img = ImageOps.grayscale(pyautogui.screenshot(region=(int(x) - 4, int(y) - 4, 9, 9)))
         return sum(1 for p in img.getdata() if p < 100)
 
+    def apagar(self, n):
+        """Backspace n vezes (limpa um campo de texto)."""
+        self.checar()
+        pyautogui.press("backspace", presses=n, interval=0)
+        self.dormir(0.3)
+
     def colar(self, texto, espera=1.0):
         """Cola um texto (aceita acentos) pela área de transferência. O Domínio roda remoto (GraphOn) e
         a área de transferência demora a sincronizar: grava, espera, e só então Ctrl+V."""

@@ -68,6 +68,9 @@ class Dom:
                 self.resumo = "apresentou" in self.dlg
                 self.dlg = ""
 
+    def apagar(self, n):
+        self.campo = ""
+
     def colar(self, texto, espera=1.0):
         self.campo = texto.lower() if self.colagem_ok else "texto qualquer que estava copiado"
 
@@ -136,7 +139,7 @@ class Dom:
 
 imp.d.fechar_janelas_abertas = lambda t: None
 dm = Dom()
-r = imp.importar_tipo(dm, "CT-e", r"M:\Users\X\494-A\112026\CT-e", "112026\\CT-e", simular=False)
+r = imp.importar_tipo(dm, "CT-e", r"M:\Users\Public\OrbiImport\CT-e", "orbiimport\\CT-e", simular=False)
 print(r, dm.avisos)
 assert dm.gravados == [409, 451], dm.gravados                     # entradas e canceladas, uma por vez
 assert all("produtos: 2" in x for x in r) and "todos_advertencias" in dm.cl
