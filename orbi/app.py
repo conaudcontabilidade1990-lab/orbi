@@ -90,6 +90,11 @@ class App:
         if self.cfg.get("_erro_config"):
             self.log(f"Aviso: config.json com erro, usando padrão ({self.cfg['_erro_config']}).")
         atualizacao.limpar_antigo()
+        if self.cfg.get("iniciar_windows") and atualizacao.eh_executavel():
+            try:   # o Orbi pode ter mudado de pasta (instalado pelo servidor): atualiza o atalho de início
+                self.definir_iniciar_windows(True)
+            except Exception:
+                pass
         threading.Thread(target=self._checar_atualizacao, daemon=True).start()
         root.report_callback_exception = self._erro_interface
         root.after(60, self._drenar)
