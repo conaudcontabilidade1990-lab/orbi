@@ -67,7 +67,7 @@ for tema in ("claro", "escuro"):
     # operador do Fiscal
     a._login_ok(conta.Usuario("u1", "op@conaud", "Operador Teste", "operador", ["fiscal/xml"]))
     esperar(root, 0.8)
-    assert set(a.nav) == {"executar", "empresas", "painel"}, a.nav.keys()
+    assert set(a.nav) == {"executar", "empresas", "agenda", "painel"}, a.nav.keys()
     assert a.om_dep.cget("values") == ["Departamento Fiscal"], a.om_dep.cget("values")
     assert "Gerar parcelas — Saídas" in a.om_rot.cget("values")
     a.anel.definir(0.6, "60%", "3 de 5")
@@ -92,7 +92,7 @@ assert not hasattr(a, "om_dep") or not a.om_dep.winfo_exists()
 a._sair()
 a._login_ok(conta.Usuario("u3", "adm@x", "Admin", "admin", ["pessoal/folha"]))
 esperar(root, 0.5)
-assert set(a.nav) == {"executar", "empresas", "painel", "calibrar"}
+assert set(a.nav) == {"executar", "empresas", "agenda", "painel", "calibrar"}
 
 # borda azul: aparece, deixa o clique passar e continua visível com o Orbi minimizado
 a.borda.mostrar(lambda: None)

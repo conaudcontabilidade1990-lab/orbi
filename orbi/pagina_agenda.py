@@ -167,7 +167,7 @@ class Formulario(ctk.CTkToplevel):
         self.app, self.ag = app, ag
         F = app._fonte
         self.title("Editar agendamento" if ag.get("id") else "Novo agendamento")
-        self.geometry("560x640")
+        self.geometry("560x600")
         self.configure(fg_color=COR["cartao"])
         self.transient(app.root)
         self.after(150, self.grab_set)
