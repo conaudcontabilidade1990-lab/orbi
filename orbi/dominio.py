@@ -2,7 +2,7 @@
 import re
 import time
 
-from .tela import Parar
+from .tela import Parar, Pular
 
 MSG = {
     "vazio": ["foram encontrados", "encontrados registros", "estas caracteristicas"],
@@ -73,9 +73,10 @@ def trocar_empresa(t, codigo):
         t.aviso(f"linha selecionada lida como '{linha}'; confirmei pelo canto da tela")
     t.clicar("troca_acessar", espera=0.5)
     if not t.aguardar(lambda: empresa_ativa_e(t, codigo), espera, intervalo=0.4):
-        raise Parar(f"A empresa ativa não ficou {codigo} (lido no canto: '{t.ler('empresa_ativa')}' / "
+        raise Pular(f"A empresa ativa não ficou {codigo} (lido no canto: '{t.ler('empresa_ativa')}' / "
                     f"'{t.ler('empresa_codigo', fator=4, binarizar=True, borda=12)}'). "
-                    "Confira se o código existe e está ativo. Nada foi feito nessa empresa.")
+                    "O código pode não existir, estar inativo ou não ser deste módulo no Domínio. "
+                    "Nada foi feito nessa empresa; segui para a próxima.")
     t.log(f"  empresa {codigo} ativa")
 
 

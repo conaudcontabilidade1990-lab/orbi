@@ -22,6 +22,11 @@ class Parar(Exception):
     """Situação não prevista: a rotina para sem contornar e mostra o motivo."""
 
 
+class Pular(Parar):
+    """Problema só desta empresa e nada foi feito nela (ex.: código não encontrado no Domínio):
+    a rotina registra o erro e segue para a próxima."""
+
+
 class Cancelado(Exception):
     """O usuário clicou em Parar."""
 

@@ -172,6 +172,22 @@ assert "RELATÓRIO" in log and "665: sem notas sem parcelas" in log, "a rotina n
 assert a.cont_exec["sucesso"].cget("text") == "2", a.cont_exec["sucesso"].cget("text")
 assert not a.rodando and str(a.bt_iniciar.cget("state")) == "normal"
 foto(root, "4_executado_escuro")
+# empresa que o Domínio não acha: pula e segue para a próxima
+from orbi.tela import Pular  # noqa: E402
+def _exec(t, c, s):
+    if c == "9":
+        raise Pular("A empresa ativa não ficou 9")
+    return "sem notas sem parcelas"
+for r in ROTINAS:
+    r.executar_empresa = _exec
+a.txt_emp.delete("1.0", "end"); a.txt_emp.insert("1.0", "9 665")
+a.bt_iniciar.invoke()
+fim = time.time() + 15
+while time.time() < fim and (a.rodando or time.time() < fim - 13):
+    root.update(); time.sleep(0.03)
+esperar(root, 0.5)
+log = a.txt_log.get("1.0", "end")
+assert "9: PULADA" in log and "665: sem notas sem parcelas" in log, log[-500:]
 root.destroy()
 
 # Agenda: página, formulário e execução de um agendamento pelo caminho real (Domínio simulado)

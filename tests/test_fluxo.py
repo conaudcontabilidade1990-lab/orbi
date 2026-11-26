@@ -119,4 +119,18 @@ dm = Dominio(tem_2554=False, menu="saidas"); print(sai.executar_empresa(dm, "667
 print(f"  espera fixa somada (Saídas com notas): {dm.tempo:.1f} s")
 dm = Dominio(False, False, menu="saidas"); print(sai.executar_empresa(dm, "667", False))
 print(f"  espera fixa somada (Saídas sem notas): {dm.tempo:.1f} s")
+# código que não existe no Domínio: o Domínio acessa outra empresa -> Pular (nada feito)
+from orbi.tela import Pular  # noqa: E402
+dm = Dominio(menu="saidas"); dm.empresa_errada = "90"
+_orig = Dominio.clicar
+def _clicar(self, n, **k):
+    _orig(self, n, **k)
+    if n == "troca_acessar" and getattr(self, "empresa_errada", None):
+        self.empresa = self.empresa_errada
+Dominio.clicar = _clicar
+try:
+    sai.executar_empresa(dm, "9", False); raise SystemExit("deveria pular")
+except Pular as e:
+    print("pulou ok:", str(e)[:60]); assert not dm.gerados and "menu_utilitarios" not in dm.cl
+Dominio.clicar = _orig
 print("ok: fluxos das rotinas")

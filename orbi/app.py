@@ -27,7 +27,7 @@ from . import config as cfgmod
 from .borda import Borda
 from .graficos import COR, Anel, Barras, contar, cor
 from .rotinas import ROTINAS, Resultado
-from .tela import Cancelado, Parar, Tela
+from .tela import Cancelado, Parar, Pular, Tela
 
 ctk.set_window_scaling(1.0)   # o app já é "DPI aware"; sem escala extra do CustomTkinter
 ctk.set_widget_scaling(1.0)
@@ -1123,6 +1123,7 @@ class App:
         try:
             t.dormir(3)
             t.conferir_resolucao()
+            seguidas = 0
             for i, cod in enumerate(empresas, 1):
                 nome = getattr(self, "nomes_exec", {}).get(cod, "")
                 self.log(f"Empresa {cod}{' ' + nome if nome else ''} ({i}/{len(empresas)})")
@@ -1134,12 +1135,23 @@ class App:
                     resultados.append(Resultado(cod, res + (f" (avisos: {'; '.join(t.avisos)})" if t.avisos else "")))
                     self.log(f"  -> {res}")
                     registrar(cod, st, res)
+                except Pular as e:
+                    img = t.foto(f"pulada_{cod}")
+                    resultados.append(Resultado(cod, f"PULADA: {e} (tela salva: {img.name})", False))
+                    self.log(f"  !! PULADA: {e}")
+                    registrar(cod, "erro", str(e))
+                    seguidas += 1
+                    if seguidas >= 3:
+                        self.log("!! 3 empresas seguidas não puderam ser acessadas — parei para conferir.")
+                        break
+                    continue
                 except Parar as e:
                     img = t.foto(f"parada_{cod}")
                     resultados.append(Resultado(cod, f"PARADO: {e} (tela salva: {img.name})", False))
                     self.log(f"  !! PARADO: {e}")
                     registrar(cod, "erro", str(e))
                     break
+                seguidas = 0
         except Cancelado:
             self.log("Interrompido pelo botão Parar.")
         except Parar as e:
