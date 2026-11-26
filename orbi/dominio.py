@@ -29,9 +29,18 @@ def trazer_para_frente(t):
         t.checar()
         janela.trazer_para_frente(hwnd)
         t.clicar("titulo_app", espera=0.3)   # já maximizado no principal: o título fica neste ponto
-        lido = t.aguardar(lambda: (lambda x: x if "dominio escrita fiscal" in x else "")(t.ler("titulo_app")), 2)
-        if lido:
+        ok = lambda: (lambda x: x if "dominio escrita fiscal" in x else "")(t.ler("titulo_app"))  # noqa: E731
+        if t.aguardar(ok, 2):
             return
+        # restaurou mas não maximizou: pede de novo e, se preciso, duplo clique na barra de título dela
+        janela.maximizar(hwnd)
+        if t.aguardar(ok, 2):
+            return
+        esq, topo, dir_, _ = janela.retangulo(hwnd)
+        if dir_ - esq > 300:
+            t.duplo(esq + 300, topo + 12, espera=1.0)
+            if t.aguardar(ok, 2):
+                return
     raise Parar("Não consegui trazer o Domínio Escrita Fiscal para a frente "
                 f"(título lido: '{t.ler('titulo_app')}').")
 
@@ -60,21 +69,26 @@ def fechar_janelas_abertas(t):
         fechar_janela(t)
     else:
         raise Parar("Há uma janela aberta no Domínio que não consegui fechar. Feche-a e rode de novo.")
-    # 2) janelas soltas (não maximizadas): acha o botão vermelho [X] de cada uma e fecha
+    # 2) janelas soltas (não maximizadas): acha o [X] de cada uma pelo ícone da barra de título e fecha
+    def sumiu(x, y):
+        return lambda: not any(abs(bx - x) < 8 and abs(by - y) < 8 for bx, by in t.botoes_fechar("area_janelas"))
+
     for _ in range(10):
         botoes = t.botoes_fechar("area_janelas")
         if not botoes:
             return
-        x, y = botoes[0]
-        nome = t.ler((max(0, x - 640), max(0, y - 9), 600, 18))
-        t.log(f"  fechando janela aberta: {nome[:60] or '(sem título)'}")
-        fechou = lambda: len(t.botoes_fechar("area_janelas")) < len(botoes)  # noqa: E731
-        t.clicar_em(x, y, espera=0.3)
-        if t.aguardar(fechou, 3, intervalo=0.3):
-            continue
-        # o 1º clique às vezes só ativa a janela (Domínio remoto): tenta mais uma vez
-        t.clicar_em(x, y, espera=0.3)
-        if t.aguardar(fechou, 3, intervalo=0.3):
+        fechou = False
+        for x, y in botoes:        # a da frente primeiro; se ela não fechar (ex.: atrás de um diálogo), tenta a próxima
+            nome = t.ler((max(0, x - 640), max(0, y - 9), 600, 18))
+            t.log(f"  fechando janela aberta: {nome[:60] or '(sem título)'}")
+            for _clique in range(2):   # o 1º clique às vezes só ativa a janela (Domínio remoto)
+                t.clicar_em(x, y, espera=0.3)
+                if t.aguardar(sumiu(x, y), 3, intervalo=0.3):
+                    fechou = True
+                    break
+            if fechou:
+                break
+        if fechou:
             continue
         aviso = t.ler("mensagem")
         raise Parar(f"A janela '{nome[:60]}' não fechou" + (f" (o Domínio perguntou: '{aviso[:120]}')" if aviso else "")

@@ -212,41 +212,44 @@ def codigo_da_linha_azul(img_lista, x_amostra, x0, x1):
 
 
 def botoes_fechar(img):
-    """Centros (x, y) dos botões vermelhos de fechar [X] de janelas internas do Domínio na imagem.
-    O botão é uma faixa vermelha de 20 a 40 px de largura com um X branco no meio."""
-    r, g, b = img.convert("RGB").split()
-    mascara = ImageChops.multiply(ImageChops.multiply(
-        r.point(lambda v: 255 if v > 160 else 0), g.point(lambda v: 255 if v < 140 else 0)),
-        b.point(lambda v: 255 if v < 120 else 0))
-    caixa = mascara.getbbox()
-    if not caixa:
-        return []
-    px = img.convert("RGB").load()
-    m = mascara.load()
-    w, h = img.size
-    achados = []
-    for y in range(caixa[1], caixa[3]):
-        x = caixa[0]
-        while x < caixa[2]:
-            if not m[x, y]:
-                x += 1
-                continue
-            ini = x
-            while x < caixa[2] and m[x, y] and px[x, y][0] - px[x, y][1] > 60:
-                x += 1
-            n = x - ini
-            x += 1
-            if not 20 <= n <= 40:
-                continue
-            cx = ini + n // 2
-            if any(abs(cx - a) < 20 and abs(y - c) < 25 for a, c in achados):
-                continue
-            brancos = sum(1 for yy in range(max(0, y - 11), max(0, y - 2)) for xx in range(max(0, cx - 7), min(w, cx + 8))
-                          if min(px[xx, yy]) > 215)
-            if brancos >= 4:
-                achados.append((cx, y))
-    return [(cx, max(0, y - 6)) for cx, y in achados]
+    """Centros (x, y) dos botões [X] das janelas internas do Domínio na imagem, a de cima primeiro.
 
+    Toda janela interna tem o ícone magenta do Domínio no começo da barra de título. Acha o ícone,
+    segue a barra de título para a direita até o fundo escuro e o [X] fica ~21 px antes da borda.
+    (Não depende da cor do [X]: em janela inativa ele é cinza, não vermelho.)"""
+    rgb = img.convert("RGB")
+    r, g, b = rgb.split()
+    mascara = ImageChops.multiply(ImageChops.multiply(
+        r.point(lambda v: 255 if 130 <= v <= 205 else 0), g.point(lambda v: 255 if v < 70 else 0)),
+        b.point(lambda v: 255 if 70 <= v <= 150 else 0))
+    if not mascara.getbbox():
+        return []
+    px, m = rgb.load(), mascara.load()
+    w, h = rgb.size
+
+    def escuro(x, y):
+        return max(px[x, y]) < 110
+
+    achados = []
+    for y in range(h):
+        for x in range(w):
+            if not m[x, y] or any(abs(x - a) < 20 and -2 <= y - (c - 7) < 16 for a, c, _ in achados):
+                continue
+            # ícone: coluna magenta de ~10+ px de altura
+            alto = sum(1 for yy in range(y, min(h, y + 16)) if m[x, yy])
+            if alto < 10:
+                continue
+            cy = y + 7
+            # borda direita da janela: 1ª coluna escura de cima a baixo (moldura da janela ou fundo)
+            ys = range(max(0, cy - 6), min(h, cy + 30))
+            xe = x + 150
+            while xe < w and sum(1 for yy in ys if escuro(xe, yy)) < 0.8 * len(ys):
+                xe += 1
+            if xe >= w and xe - x < 150:
+                continue
+            achados.append((x, cy, (xe - 21, cy)))
+    achados.sort(key=lambda a: a[1], reverse=True)    # a de baixo/da frente primeiro (diálogos ficam por cima)
+    return [a[2] for a in achados]
 
 def copiar(texto):
     """Coloca texto na área de transferência do Windows (CF_UNICODETEXT)."""

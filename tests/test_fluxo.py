@@ -98,12 +98,17 @@ class Dominio:
                 return (100 + i, 200, n)
         return None
     def botoes_fechar(self, r):
-        return [(900 + i, 300) for i in range(len(self.soltas))]
+        return [self._pos(n) for n in self.soltas]
+    @staticmethod
+    def _pos(n):
+        k = ord(n[0]) % 10
+        return (900 + 40 * k, 300 - 10 * k)
     def clicar_em(self, x, y, espera=None):
         if x >= 900:
             self.cl.append("fechar_solta")
             if self.teimosa == "1clique": self.teimosa = False; return
-            if not self.teimosa: self.soltas.pop(x - 900)
+            if not self.teimosa:
+                self.soltas = [n for n in self.soltas if self._pos(n) != (x, y)]
             return
         rot = self.MENU[x - 100]
         self.cl.append("menu:" + rot)

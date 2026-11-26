@@ -139,3 +139,19 @@ def trazer_para_frente(hwnd):
             if ligado:
                 u.AttachThreadInput(meu, ativo, False)
     time.sleep(0.8)
+
+
+def maximizar(hwnd):
+    """Pede ao próprio Windows para maximizar (algumas janelas do AppController ignoram o ShowWindow)."""
+    u, _ = _api()
+    u.PostMessageW.argtypes = [wintypes.HWND, wintypes.UINT, wintypes.WPARAM, wintypes.LPARAM]
+    u.ShowWindow(hwnd, 3)
+    u.PostMessageW(hwnd, 0x0112, 0xF030, 0)     # WM_SYSCOMMAND, SC_MAXIMIZE
+    time.sleep(0.8)
+
+
+def retangulo(hwnd):
+    u, _ = _api()
+    r = wintypes.RECT()
+    u.GetWindowRect(hwnd, ctypes.byref(r))
+    return r.left, r.top, r.right, r.bottom
