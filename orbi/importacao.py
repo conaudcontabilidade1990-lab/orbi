@@ -244,17 +244,17 @@ def importar_e_gravar(t, xis, simular, log):
     aba = _palavra(t, abas, lambda w: w.startswith("advert"))
     if aba:
         t.clicar_em(*_centro(aba), espera=0.8)
-        bt = _palavra(t, _regiao_botoes(t, rx, ry), lambda w: w == "todos", mais_a_direita=True)
+        bt = _palavra(t, _regiao_botoes(t, rx, ry), lambda w: w.startswith("todo"), mais_a_direita=True)
         if bt:
             t.clicar_em(*_centro(bt), espera=0.8)
         else:
             t.aviso("advertências: não achei o botão Todos")
-    erros = _palavra(t, abas, lambda w: w == "erros")
+    erros = _palavra(t, abas, lambda w: w.startswith("erro"))
     if erros and t.escuros_em(*_centro(erros)) >= 6:
         t.aviso("a importação teve ERROS (esses registros não são gravados) — confira no Domínio")
 
     botoes = t.palavras(_regiao_botoes(t, rx, ry))
-    cancelar = next((p for p in botoes if p[0] == "cancelar"), None)
+    cancelar = next((p for p in botoes if p[0].startswith("cancel")), None)
     if simular:
         if not cancelar:
             raise Parar("Não achei o botão Cancelar do Resumo dos Dados.")
@@ -262,7 +262,7 @@ def importar_e_gravar(t, xis, simular, log):
         t.aguardar(lambda: not _janela(t, "resumo"), 10, intervalo=0.5)
         return "simulação: chegou ao Resumo dos Dados e cancelou (nada gravado)"
 
-    gravar = next((p for p in botoes if p[0] == "gravar"), None)
+    gravar = next((p for p in botoes if p[0].startswith("grav") and not p[0].startswith("gravad")), None)
     if not gravar:
         raise Parar("Não achei o botão Gravar do Resumo dos Dados.")
     t.clicar_em(*_centro(gravar), espera=1.0)
@@ -298,7 +298,7 @@ def importar_e_gravar(t, xis, simular, log):
 
 def fechar_tela(t, xis):
     x, y = xis
-    if _palavra(t, (x + DX_FECHAR - 50, y + DY_FECHAR - 12, 100, 24), lambda w: w == "fechar"):
+    if _palavra(t, (x + DX_FECHAR - 50, y + DY_FECHAR - 12, 100, 24), lambda w: w.startswith("fech")):
         t.clicar_em(x + DX_FECHAR, y + DY_FECHAR, espera=0.8)
     else:
         t.clicar_em(x, y, espera=0.8)

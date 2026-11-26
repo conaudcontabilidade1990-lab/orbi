@@ -54,7 +54,7 @@ for arq, xis_esp, opcoes in (
         assert achou and abs(achou[0][2] + achou[0][4] / 2 - esp_y) <= 6, (nome, achou)
     # botões calculados a partir do [X]
     pal = t.palavras((x + imp.DX_IMPORTAR - 50, y + imp.DY_IMPORTAR - 12, 100, 24))
-    assert any(p[0] == "importar" for p in pal), pal
+    assert any(p[0].startswith("import") for p in pal), pal
     pal = t.palavras((x + imp.DX_FECHAR - 50, y + imp.DY_FECHAR - 12, 100, 24))
-    assert any(p[0] == "fechar" for p in pal), pal
+    assert any(p[0].startswith("fech") for p in pal), pal
 print("ok: menu e telas de importação reconhecidos")
