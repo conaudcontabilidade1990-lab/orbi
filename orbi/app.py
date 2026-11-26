@@ -369,6 +369,7 @@ class App:
         self.lbl_desc = ctk.CTkLabel(f, text="", font=fonte(12), text_color=COR["suave"], anchor="w",
                                      justify="left", wraplength=520)
         self.lbl_desc.pack(fill="x", pady=(2, 12))
+        f.bind("<Configure>", lambda e: self.lbl_desc.configure(wraplength=max(200, e.width - 10)))
         rotulo("EMPRESAS (códigos separados por espaço, vírgula ou linha)")
         self.txt_emp = ctk.CTkTextbox(f, height=70, corner_radius=10, font=("Consolas", 13), border_width=1,
                                       border_color=COR["borda"], fg_color=COR["caixa"], text_color=COR["texto"])
@@ -560,6 +561,12 @@ class App:
                     self._contar_resultado(msg)
                 elif alvo == "fim":
                     self._fim()
+                elif alvo == "janela":
+                    if msg == "minimizar":
+                        self.root.iconify()
+                    else:
+                        self.root.deiconify()
+                        self.root.lift()
                 else:
                     self._escrever(alvo, msg)
             except Exception:
@@ -677,7 +684,7 @@ class App:
         self.log(f"=== {rot.nome} | {len(empresas)} empresa(s) | {'SIMULAÇÃO' if simular else 'GERAÇÃO REAL'}"
                  f" | usuário: {email}")
         self.log("Começando em 5 s — deixe o Escrita Fiscal aberto e não mexa no mouse.")
-        self.root.after(0, self.root.iconify)
+        self.fila.put(("janela", "minimizar"))
 
         def registrar(cod, status, texto):
             self.fila.put(("resultado", (cod, status)))
@@ -752,7 +759,7 @@ class App:
         log = lambda m: self.log(m, "cal")
         log("Testando leituras em 5 s...")
         t = Tela(self.cfg, log)
-        self.root.after(0, self.root.iconify)
+        self.fila.put(("janela", "minimizar"))
         time.sleep(5)
         try:
             log(f"Resolução: {list(pyautogui.size())} (esperada {self.cfg['resolucao']})")
@@ -768,7 +775,7 @@ class App:
         except Exception as e:
             import traceback
             log(f"Erro: {type(e).__name__}: {e}\n{traceback.format_exc()}")
-        self.root.after(0, self.root.deiconify)
+        self.fila.put(("janela", "restaurar"))
 
     def _posicao(self):
         import pyautogui

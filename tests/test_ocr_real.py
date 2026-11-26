@@ -36,6 +36,6 @@ titulo = norm(ocr_imagem(ba.crop((x, y, x + w, y + h))))
 x, y, w, h = R["ba_linha"]
 filtro = norm(ocr_imagem(ba.crop((x, y, x + w, y + h))))
 print("busca avançada:", titulo, "|", filtro)
-assert "busca avancada" in titulo, titulo
+assert "busca avan" in titulo, titulo
 assert "acumulador" in filtro and "iguala" in filtro.replace(" ", ""), filtro
 print("ok: Busca avançada lida")

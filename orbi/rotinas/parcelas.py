@@ -142,7 +142,7 @@ class GerarParcelasEntradas(GerarParcelas):
     def _busca_2554(self, t):
         self._caixas(t)
         t.clicar("busca_avancada", espera=1.5)
-        if t.esperar("ba_titulo", {"ok": ["busca avancada"]}, 6, intervalo=0.7) != "ok":
+        if t.esperar("ba_titulo", {"ok": ["busca avan"]}, 6, intervalo=0.7) != "ok":
             raise Parar("A janela Busca avançada não abriu.")
         t.clicar("ba_coluna", espera=0.6)
         t.digitar("a", espera=1)                 # "Acumulador" é a única coluna com A

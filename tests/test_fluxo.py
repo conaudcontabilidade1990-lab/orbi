@@ -69,7 +69,7 @@ class Dominio:
         return {"empresa_ativa": f"empresa - {self.empresa}",
                 "titulo_app": f"dominio escrita fiscal [gerar parcelas de notas de {self.menu}]" if self.janela else "dominio escrita fiscal",
                 "troca_titulo": "troca de empresas", "botao_buscar": "buscar",
-                "ba_titulo": "busca avancada" if self.ba else "",
+                "ba_titulo": "busca avangada" if self.ba else "",
                 "ba_linha": "acumulador igual a 2554",
                 "campo_vencimento": "informar",
                 "dialogo_gerar": "quantidade de parcelas vencimento" if self.dlg else ""}.get(r, "")
