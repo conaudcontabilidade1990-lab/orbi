@@ -52,10 +52,11 @@ def trocar_empresa(t, codigo):
     t.digitar(codigo, espera=1)
     padrao = re.compile(rf"\s*{re.escape(codigo)}(?!\d)")
     fim = time.time() + espera            # o Domínio às vezes demora a redesenhar a lista
-    linha = t.ler("troca_linha")
+    xa = t.P["troca_amostra_azul"][0]
+    linha = t.ler_linha_destacada("troca_lista", xa)
     while not padrao.match(linha) and time.time() < fim:
         t.dormir(0.7)
-        linha = t.ler("troca_linha")
+        linha = t.ler_linha_destacada("troca_lista", xa)
     if not padrao.match(linha):
         t.clicar("troca_fechar", espera=1)
         raise Parar(f"A empresa {codigo} não apareceu selecionada na Troca de empresas "
@@ -84,6 +85,11 @@ def abrir_gerar_parcelas(t, ponto_menu, palavra_titulo):
     if not janela_maximizada(t, palavra_titulo):
         x, y = t.P["titulo_janela_normal"]
         t.duplo(x, y, espera=2)
+    if not janela_maximizada(t, palavra_titulo):
+        # a janela abriu em outra posição: acha o título dela na tela e dá duplo clique
+        pos = t.achar_texto("gerar parcelas de notas")
+        if pos:
+            t.duplo(*pos, espera=2)
     if not janela_maximizada(t, palavra_titulo):
         raise Parar(f"A janela Gerar Parcelas ({palavra_titulo}) não abriu maximizada "
                     f"(título lido: '{t.ler('titulo_app')}').")

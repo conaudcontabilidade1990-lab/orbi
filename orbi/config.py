@@ -12,7 +12,7 @@ PASTA = Path(os.environ.get("APPDATA", Path.home())) / "Orbi"
 PASTA_LOGS = PASTA / "logs"
 ARQUIVO = PASTA / "config.json"
 
-ESQUEMA = 5  # sobe quando pontos/regiões padrão mudam; ajustes antigos são descartados
+ESQUEMA = 6  # sobe quando pontos/regiões padrão mudam; ajustes antigos são descartados
 
 PADRAO = {
     "resolucao": [1366, 768],
@@ -29,7 +29,7 @@ PADRAO = {
     "pontos": {
         "titulo_app": [60, 12],
         "troca_empresa": [131, 93], "troca_por_codigo": [482, 199], "troca_busca": [603, 227],
-        "troca_acessar": [703, 704], "troca_fechar": [875, 704],
+        "troca_acessar": [703, 704], "troca_fechar": [875, 704], "troca_amostra_azul": [880, 300],
         "menu_utilitarios": [495, 53], "menu_parcelas": [583, 441], "menu_gerar": [917, 443],
         "menu_entradas": [1055, 445], "menu_saidas": [1050, 468], "menu_servicos": [1053, 490],
         "titulo_janela_normal": [500, 217],   # duplo clique maximiza a janela Gerar Parcelas
@@ -49,7 +49,7 @@ PADRAO = {
         "mensagem": [250, 300, 866, 180],
         "empresa_ativa": [1150, 60, 216, 52],   # "ADEMIR BELTRANI - 611" (normal ou com janela maximizada)
         "troca_titulo": [433, 133, 250, 18],    # título "Troca de empresas"
-        "troca_linha": [455, 289, 440, 18],     # 1ª linha (destacada) da Troca de empresas
+        "troca_lista": [455, 289, 440, 380],    # lista da Troca de empresas (procura a linha azul)
         "dialogo_gerar": [294, 190, 782, 400],
         "campo_parcelas": [469, 324, 42, 14],  # interior do campo, sem borda e setas
         "campo_vencimento": [468, 346, 110, 17],

@@ -48,6 +48,9 @@ jobs:
       - name: Teste da busca de janelas
         run: python -c "from orbi import janela; l = janela.janelas_visiveis(); print(len(l), 'janelas'); print(janela.achar()[1][:300])"
 
+      - name: Teste do OCR em telas do Domínio
+        run: python tests/test_ocr_real.py
+
       - name: Teste do OCR (Python)
         run: |
           python main.py --testar-ocr

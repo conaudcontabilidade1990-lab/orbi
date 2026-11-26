@@ -24,3 +24,13 @@ assert numero_de_imagem(recorte("campo_parcelas")) == "1", numero_de_imagem(reco
 assert numero_de_imagem(recorte("campo_dias")) == "1", numero_de_imagem(recorte("campo_dias"))  # com cursor
 assert numero_de_imagem(Image.new("L", (42, 14), 255)) == ""
 print("ok: números lidos corretamente")
+
+# linha selecionada na Troca de empresas (tela real: 665 na 2ª linha, perto do fim da lista)
+from orbi.tela import faixa_destacada  # noqa: E402
+
+troca = Image.open(Path(__file__).parent / "fixtures" / "troca_empresas_665.png")
+x, y, w, h = R["troca_lista"]
+faixa = faixa_destacada(troca.crop((x, y, x + w, y + h)), config.PADRAO["pontos"]["troca_amostra_azul"][0] - x)
+assert faixa is not None and 18 <= faixa[0] <= 21 and 35 <= faixa[1] <= 38, faixa  # y 309-326 na tela
+assert faixa_destacada(Image.new("RGB", (40, 100), "white"), 5) is None
+print("ok: linha destacada encontrada", faixa)

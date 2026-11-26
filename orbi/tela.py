@@ -64,8 +64,8 @@ def preparar(img):
     return img.resize((img.width * 3, img.height * 3)).convert("RGBA")
 
 
-def ocr_imagem(img, idioma="pt-BR", preparar_img=True):
-    """Lê o texto de uma imagem PIL."""
+def _reconhecer(img, idioma, preparar_img):
+    """Roda o OCR do Windows e devolve (resultado, fator de ampliação)."""
     global _motor
     from winrt.windows.foundation import AsyncStatus
     from winrt.windows.graphics.imaging import BitmapPixelFormat, SoftwareBitmap
@@ -74,6 +74,7 @@ def ocr_imagem(img, idioma="pt-BR", preparar_img=True):
     with _trava:
         if _motor is None:
             _motor = _criar_motor(idioma)
+        fator = 3 if preparar_img else 1
         img = preparar(img) if preparar_img else img.convert("RGBA")
         w = DataWriter()
         w.write_bytes(img.tobytes())
@@ -87,7 +88,47 @@ def ocr_imagem(img, idioma="pt-BR", preparar_img=True):
             time.sleep(0.01)
         if op.status != AsyncStatus.COMPLETED:
             raise RuntimeError(f"OCR do Windows falhou (status {op.status}).")
-        return op.get_results().text or ""
+        return op.get_results(), fator
+
+
+def ocr_imagem(img, idioma="pt-BR", preparar_img=True):
+    """Lê o texto de uma imagem PIL."""
+    res, _ = _reconhecer(img, idioma, preparar_img)
+    return res.text or ""
+
+
+def ocr_linhas(img, idioma="pt-BR"):
+    """[(texto, x, y, largura, altura)] de cada linha, em pixels da imagem original."""
+    res, f = _reconhecer(img, idioma, True)
+    linhas = []
+    for ln in res.lines:
+        rs = [w.bounding_rect for w in ln.words]
+        if not rs:
+            continue
+        x0, y0 = min(r.x for r in rs), min(r.y for r in rs)
+        x1, y1 = max(r.x + r.width for r in rs), max(r.y + r.height for r in rs)
+        linhas.append((ln.text, x0 / f, y0 / f, (x1 - x0) / f, (y1 - y0) / f))
+    return linhas
+
+
+def faixa_destacada(img, x):
+    """(y0, y1) da faixa azul de seleção na coluna x da imagem; None se não houver."""
+    rgb = img.convert("RGB")
+    melhor, ini = None, None
+    for y in range(rgb.height + 1):
+        azul = False
+        if y < rgb.height:
+            r, g, b = rgb.getpixel((x, y))
+            azul = b > 150 and r < 70 and 70 < g < 170
+        if azul and ini is None:
+            ini = y
+        elif not azul and ini is not None:
+            if melhor is None or (y - ini) > (melhor[1] - melhor[0] + 1):
+                melhor = (ini, y - 1)
+            ini = None
+    if melhor and melhor[1] - melhor[0] >= 8:
+        return melhor
+    return None
 
 
 # ---------------------- números em campos (por desenho) ----------------------
@@ -202,6 +243,26 @@ class Tela:
     def ler_numero(self, regiao):
         self.checar()
         return numero_de_imagem(pyautogui.screenshot(region=self.regiao(regiao)))
+
+    def ler_linha_destacada(self, regiao_lista, x_amostra):
+        """Texto da linha selecionada (faixa azul) de uma lista, esteja em que posição estiver."""
+        self.checar()
+        x, y, w, h = self.regiao(regiao_lista)
+        img = pyautogui.screenshot(region=(x, y, w, h))
+        faixa = faixa_destacada(img, x_amostra - x)
+        if not faixa:
+            return ""
+        y0, y1 = faixa
+        return norm(ocr_imagem(img.crop((0, y0, w, y1 + 1)), self.cfg["idioma_ocr"]))
+
+    def achar_texto(self, trecho, regiao=None):
+        """Centro (x, y) na tela da primeira linha cujo texto contém o trecho; None se não achar."""
+        self.checar()
+        x0, y0, w, h = self.regiao(regiao) if regiao else (0, 0, *self.cfg["resolucao"])
+        for texto, x, y, lw, lh in ocr_linhas(pyautogui.screenshot(region=(x0, y0, w, h)), self.cfg["idioma_ocr"]):
+            if trecho in norm(texto):
+                return int(x0 + x + lw / 2), int(y0 + y + lh / 2)
+        return None
 
     def esperar(self, regiao, alvos, timeout, intervalo=1.5):
         """alvos = {"nome": ["trecho", ...]}. Retorna o nome do alvo que apareceu, ou None."""
