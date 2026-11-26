@@ -412,6 +412,13 @@ class Tela:
         return [(norm(tx), x0 + x, y0 + y, lw, lh, i)
                 for tx, x, y, lw, lh, i in ocr_palavras(pyautogui.screenshot(region=(x0, y0, w, h)), self.cfg["idioma_ocr"])]
 
+    def fracao_azul(self, regiao):
+        """Fração dos pixels da região que são o azul de linha selecionada (lista com itens)."""
+        self.checar()
+        img = pyautogui.screenshot(region=self.regiao(regiao)).convert("RGB")
+        px = list(img.getdata())
+        return sum(1 for r, g, b in px if b > 150 and r < 90 and 70 < g < 190) / max(1, len(px))
+
     def escuros_em(self, x, y):
         img = ImageOps.grayscale(pyautogui.screenshot(region=(int(x) - 4, int(y) - 4, 9, 9)))
         return sum(1 for p in img.getdata() if p < 100)

@@ -36,7 +36,10 @@ class Dom:
     def clicar(self, nome, espera=None):
         self.cl.append(nome)
         if nome == "sel_atualizar":
-            self.listou = True
+            if self.colagem_ok:
+                self.listou = True
+            else:
+                self.dlg = "o caminho 'texto qualquer' nao e valido."
         if nome == "sel_ok":
             self.sel = False
 
@@ -67,6 +70,9 @@ class Dom:
             elif self.dlg:
                 self.resumo = "apresentou" in self.dlg
                 self.dlg = ""
+
+    def fracao_azul(self, r):
+        return 0.0
 
     def apagar(self, n):
         self.campo = ""
@@ -156,7 +162,7 @@ dm = Dom(colagem_ok=False)
 try:
     imp.importar_tipo(dm, "CT-e", r"M:\x\112026\CT-e", "112026\\CT-e", simular=False); raise AssertionError
 except Parar as e:
-    assert "colar o caminho" in str(e) and dm.gravados == [], e
+    assert "não aceitou o caminho" in str(e) and dm.gravados == [], e
 
 dm = Dom(sem_resumo=True)
 r = imp.importar_tipo(dm, "CT-e", r"M:\x\112026\CT-e", "112026\\CT-e", simular=False)

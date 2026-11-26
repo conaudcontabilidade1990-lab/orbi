@@ -140,40 +140,41 @@ def escolher_pasta(t, xis, pasta_dominio, esperado):
     t.clicar_em(x + DX_PASTA, y + DY_PASTA, espera=0.5)
     if not t.aguardar(lambda: "selecao de arquivos" in t.ler("sel_titulo"), 8, intervalo=0.4):
         raise Parar("A janela 'Seleção de arquivos' não abriu.")
-    alvo = _so(esperado.lower()).replace(" ", "")
+    def estado():
+        msg = _dialogo(t)
+        if "nao e valido" in msg or "nao existem" in msg or "invalido" in msg:
+            return "erro:" + msg
+        if t.fracao_azul("sel_linha1") > 0.4:   # 1ª linha da lista selecionada (azul)
+            return "ok"
+        linha = t.ler("sel_linha1")          # o Domínio mostra os XML de dentro do zip
+        return "ok" if ("xml" in linha or "zip" in linha) else ""
+
+    # Quem confirma o caminho é o próprio Domínio: com o caminho certo ele lista os XML do zip;
+    # errado, avisa que não é válido. (Ler o campo pelo OCR não é confiável.)
+    ultimo = ""
     for tentativa in range(3):
         t.clicar("sel_campo", espera=0.2)
         t.teclas("end")
         t.apagar(160)                      # apaga tudo (Shift+Home falha às vezes no Domínio remoto)
-        if len(_so(t.ler("sel_campo"))) > 2:
-            t.apagar(160)
         if pasta_dominio.isascii() and tentativa != 1:
-            t.digitar(pasta_dominio, espera=0.5)   # sem acento: digita tecla a tecla
+            t.digitar(pasta_dominio, espera=0.8)   # sem acento: digita tecla a tecla
         else:
             # com acento (ex.: 'Configuração HubStrom'): cola; a área de transferência do Domínio remoto
             # demora a receber o texto, então espera mais a cada tentativa
             t.colar(pasta_dominio, espera=1.5 + 1.5 * tentativa)
-        # o Domínio remoto demora a redesenhar o campo: espera o texto aparecer
-        if t.aguardar(lambda: alvo in _so(t.ler("sel_campo")).replace(" ", ""), 5, intervalo=0.5):
+            t.dormir(0.8)
+        t.clicar("sel_atualizar", espera=0.8)
+        r = t.aguardar(estado, 20, intervalo=0.5)
+        if r == "ok":
             break
+        ultimo = r or "nada apareceu"
+        if r:
+            t.teclas("enter")              # OK no aviso de caminho inválido
+            t.dormir(0.6)
     else:
         t.clicar("sel_cancelar", espera=0.5)
-        raise Parar(f"Não consegui colar o caminho da pasta na Seleção de arquivos (lido: '{t.ler('sel_campo')}').")
-    t.clicar("sel_atualizar", espera=0.5)
-
-    def estado():
-        msg = _dialogo(t)
-        if "nao e valido" in msg or "nao existem" in msg:
-            return "erro:" + msg
-        linha = t.ler("sel_linha1")          # o Domínio mostra os XML de dentro do zip
-        return "ok" if (".xml" in linha or "zip" in linha or "xml" in linha) else ""
-    r = t.aguardar(estado, 20, intervalo=0.5)
-    if r != "ok":
-        if r:
-            t.teclas("enter")
-            t.dormir(0.5)
-        t.clicar("sel_cancelar", espera=0.5)
-        raise Parar(f"A Seleção de arquivos não listou os XML do zip ({(r or 'nada apareceu')[:150]}).")
+        raise Parar(f"O Domínio não aceitou o caminho '{pasta_dominio}' depois de 3 tentativas "
+                    f"(último aviso: '{ultimo[:150]}', campo: '{t.ler('sel_campo')[:100]}').")
     t.clicar("sel_todos", espera=0.4)
     t.clicar("sel_ok", espera=0.8)
     if not t.aguardar(lambda: "selecao de arquivos" not in t.ler("sel_titulo"), 5, intervalo=0.4):
