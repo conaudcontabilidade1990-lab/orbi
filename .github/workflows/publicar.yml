@@ -89,6 +89,10 @@ jobs:
           files: dist/Orbi.exe
           generate_release_notes: true
 
+      - name: Remover ramos temporários de teste
+        shell: bash
+        run: git push origin --delete diag2 previa visual 2>/dev/null || true
+
       - name: Guardar artefato
         uses: actions/upload-artifact@v4
         with:

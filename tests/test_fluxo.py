@@ -65,7 +65,7 @@ class Dominio:
     def ler_numero(self, r):
         if r == "campo_parcelas": return "1"
         return self.dias_lidos or self.dias
-    def ler(self, r, digitos=False):
+    def ler(self, r, digitos=False, **k):
         return {"empresa_ativa": "nome da empresa", "empresa_codigo": f"- {self.empresa}",
                 "titulo_app": f"dominio escrita fiscal [gerar parcelas de notas de {self.menu}]" if self.janela else "dominio escrita fiscal",
                 "troca_titulo": "troca de empresas", "botao_buscar": "buscar",

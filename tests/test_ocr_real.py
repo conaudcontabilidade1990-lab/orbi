@@ -43,7 +43,7 @@ print("ok: Busca avançada lida")
 # código da empresa ativa lido sozinho (tela real: nome longe do código, "- 214")
 cod = Image.open(Path(__file__).parent / "fixtures" / "codigo_empresa_214.png")
 x, y, w, h = R["empresa_codigo"]
-lido = norm(ocr_imagem(cod.crop((x, y, x + w, y + h))))
+lido = norm(ocr_imagem(cod.crop((x, y, x + w, y + h)), fator=4, binarizar=True, borda=12))
 print("código da empresa:", lido)
 assert "214" in lido.replace(" ", ""), lido
 print("ok: código da empresa ativa")

@@ -38,7 +38,10 @@ def empresa_ativa_e(t, codigo):
     padrao = re.compile(rf"(?<!\d){re.escape(codigo)}(?!\d)")
     if padrao.search(t.ler("empresa_ativa")):
         return True
-    return padrao.search(t.ler("empresa_codigo")) is not None
+    for fator in (4, 6):  # só o código, em preto e branco (lê bem números isolados)
+        if padrao.search(t.ler("empresa_codigo", fator=fator, binarizar=True, borda=12)):
+            return True
+    return False
 
 
 def trocar_empresa(t, codigo):
@@ -70,7 +73,7 @@ def trocar_empresa(t, codigo):
     while not empresa_ativa_e(t, codigo):
         if time.time() > fim:
             raise Parar(f"A empresa ativa não ficou {codigo} (lido no canto: '{t.ler('empresa_ativa')}' / "
-                        f"'{t.ler('empresa_codigo')}'). "
+                        f"'{t.ler('empresa_codigo', fator=4, binarizar=True, borda=12)}'). "
                         "Confira se o código existe e está ativo. Nada foi feito nessa empresa.")
         t.dormir(1)
     t.log(f"  empresa {codigo} ativa")

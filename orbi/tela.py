@@ -10,7 +10,7 @@ import time
 import unicodedata
 
 import pyautogui
-from PIL import ImageOps
+from PIL import Image, ImageOps
 
 from . import config as cfgmod
 
@@ -57,14 +57,18 @@ def _criar_motor(idioma):
     return eng
 
 
-def preparar(img):
+def preparar(img, fator=3, binarizar=False, borda=0):
     img = ImageOps.grayscale(img)
     if sum(img.getdata()) / (img.width * img.height) < 110:  # texto claro em fundo escuro
         img = ImageOps.invert(img)
-    return img.resize((img.width * 3, img.height * 3)).convert("RGBA")
+    if binarizar:  # preto e branco puro: o OCR lê muito melhor números pequenos e isolados
+        img = img.point(lambda v: 0 if v < 128 else 255)
+    if borda:
+        img = ImageOps.expand(img, border=borda, fill=255)
+    return img.resize((img.width * fator, img.height * fator), Image.LANCZOS).convert("RGBA")
 
 
-def _reconhecer(img, idioma, preparar_img):
+def _reconhecer(img, idioma, preparar_img, fator=3, binarizar=False, borda=0):
     """Roda o OCR do Windows e devolve (resultado, fator de ampliação)."""
     global _motor
     from winrt.windows.foundation import AsyncStatus
@@ -74,8 +78,11 @@ def _reconhecer(img, idioma, preparar_img):
     with _trava:
         if _motor is None:
             _motor = _criar_motor(idioma)
-        fator = 3 if preparar_img else 1
-        img = preparar(img) if preparar_img else img.convert("RGBA")
+        if preparar_img:
+            img = preparar(img, fator, binarizar, borda)
+        else:
+            fator, borda = 1, 0
+            img = img.convert("RGBA")
         w = DataWriter()
         w.write_bytes(img.tobytes())
         sb = SoftwareBitmap.create_copy_from_buffer(
@@ -88,18 +95,18 @@ def _reconhecer(img, idioma, preparar_img):
             time.sleep(0.01)
         if op.status != AsyncStatus.COMPLETED:
             raise RuntimeError(f"OCR do Windows falhou (status {op.status}).")
-        return op.get_results(), fator
+        return op.get_results(), fator, borda
 
 
-def ocr_imagem(img, idioma="pt-BR", preparar_img=True):
+def ocr_imagem(img, idioma="pt-BR", preparar_img=True, fator=3, binarizar=False, borda=0):
     """Lê o texto de uma imagem PIL."""
-    res, _ = _reconhecer(img, idioma, preparar_img)
+    res, _, _ = _reconhecer(img, idioma, preparar_img, fator, binarizar, borda)
     return res.text or ""
 
 
 def ocr_linhas(img, idioma="pt-BR"):
     """[(texto, x, y, largura, altura)] de cada linha, em pixels da imagem original."""
-    res, f = _reconhecer(img, idioma, True)
+    res, f, _ = _reconhecer(img, idioma, True)
     linhas = []
     for ln in res.lines:
         rs = [w.bounding_rect for w in ln.words]
@@ -241,9 +248,10 @@ class Tela:
             raise Parar(f"Região '{nome_ou_tupla}' ainda não foi calibrada.")
         return tuple(r)
 
-    def ler(self, regiao, digitos=False):
+    def ler(self, regiao, digitos=False, fator=3, binarizar=False, borda=0):
         self.checar()
-        txt = norm(ocr_imagem(pyautogui.screenshot(region=self.regiao(regiao)), self.cfg["idioma_ocr"]))
+        txt = norm(ocr_imagem(pyautogui.screenshot(region=self.regiao(regiao)), self.cfg["idioma_ocr"],
+                              fator=fator, binarizar=binarizar, borda=borda))
         if digitos:
             txt = re.sub(r"[^0-9]", "", txt.replace("o", "0").replace("l", "1").replace("i", "1"))
         return txt
