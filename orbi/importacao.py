@@ -116,9 +116,19 @@ def abrir_tela(t, tipo):
 
 
 def _titulo_da_janela(t, xis):
+    """Texto da barra de título da janela cujo [X] está em xis (começa logo depois do ícone)."""
     x, y = xis
     x0 = max(0, x - 900)
-    return t.ler((x0, max(0, y - 11), x - x0 - 60, 22))
+    try:
+        faixa = t.imagem((x0, max(0, y - 1), x - x0, 3))
+        px = faixa.load()
+        icones = [i for i in range(faixa.width) for j in range(faixa.height)
+                  if 130 <= px[i, j][0] <= 205 and px[i, j][1] < 70 and 70 <= px[i, j][2] <= 150]
+        if icones:
+            x0 = x0 + max(icones) + 4
+    except Exception:
+        pass
+    return t.ler((x0, max(0, y - 11), max(40, x - x0 - 70), 22), contraste=True)
 
 
 def _e_importacao(titulo):

@@ -62,8 +62,10 @@ def _criar_motor(idioma):
     return eng
 
 
-def preparar(img, fator=3, binarizar=False, borda=0):
+def preparar(img, fator=3, binarizar=False, borda=0, contraste=False):
     img = ImageOps.grayscale(img)
+    if contraste:  # texto cinza de janela inativa: estica o contraste antes de ler
+        img = ImageOps.autocontrast(img, cutoff=1)
     if sum(img.getdata()) / (img.width * img.height) < 110:  # texto claro em fundo escuro
         img = ImageOps.invert(img)
     if binarizar:  # preto e branco puro: o OCR lê muito melhor números pequenos e isolados
@@ -73,7 +75,7 @@ def preparar(img, fator=3, binarizar=False, borda=0):
     return img.resize((img.width * fator, img.height * fator), Image.LANCZOS).convert("RGBA")
 
 
-def _reconhecer(img, idioma, preparar_img, fator=3, binarizar=False, borda=0):
+def _reconhecer(img, idioma, preparar_img, fator=3, binarizar=False, borda=0, contraste=False):
     """Roda o OCR do Windows e devolve (resultado, fator de ampliação)."""
     global _motor
     from winrt.windows.foundation import AsyncStatus
@@ -84,7 +86,7 @@ def _reconhecer(img, idioma, preparar_img, fator=3, binarizar=False, borda=0):
         if _motor is None:
             _motor = _criar_motor(idioma)
         if preparar_img:
-            img = preparar(img, fator, binarizar, borda)
+            img = preparar(img, fator, binarizar, borda, contraste)
         else:
             fator, borda = 1, 0
             img = img.convert("RGBA")
@@ -103,9 +105,9 @@ def _reconhecer(img, idioma, preparar_img, fator=3, binarizar=False, borda=0):
         return op.get_results(), fator, borda
 
 
-def ocr_imagem(img, idioma="pt-BR", preparar_img=True, fator=3, binarizar=False, borda=0):
+def ocr_imagem(img, idioma="pt-BR", preparar_img=True, fator=3, binarizar=False, borda=0, contraste=False):
     """Lê o texto de uma imagem PIL."""
-    res, _, _ = _reconhecer(img, idioma, preparar_img, fator, binarizar, borda)
+    res, _, _ = _reconhecer(img, idioma, preparar_img, fator, binarizar, borda, contraste)
     return res.text or ""
 
 
@@ -344,10 +346,10 @@ class Tela:
             raise Parar(f"Região '{nome_ou_tupla}' ainda não foi calibrada.")
         return tuple(r)
 
-    def ler(self, regiao, digitos=False, fator=3, binarizar=False, borda=0):
+    def ler(self, regiao, digitos=False, fator=3, binarizar=False, borda=0, contraste=False):
         self.checar()
         txt = norm(ocr_imagem(pyautogui.screenshot(region=self.regiao(regiao)), self.cfg["idioma_ocr"],
-                              fator=fator, binarizar=binarizar, borda=borda))
+                              fator=fator, binarizar=binarizar, borda=borda, contraste=contraste))
         if digitos:
             txt = re.sub(r"[^0-9]", "", txt.replace("o", "0").replace("l", "1").replace("i", "1"))
         return txt
@@ -411,6 +413,10 @@ class Tela:
         x0, y0, w, h = self.regiao(regiao)
         return [(norm(tx), x0 + x, y0 + y, lw, lh, i)
                 for tx, x, y, lw, lh, i in ocr_palavras(pyautogui.screenshot(region=(x0, y0, w, h)), self.cfg["idioma_ocr"])]
+
+    def imagem(self, regiao):
+        self.checar()
+        return pyautogui.screenshot(region=self.regiao(regiao)).convert("RGB")
 
     def fracao_azul(self, regiao):
         """Fração dos pixels da região que são o azul de linha selecionada (lista com itens)."""

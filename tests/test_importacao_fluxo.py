@@ -72,6 +72,9 @@ class Dom:
                 self.resumo = "apresentou" in self.dlg
                 self.dlg = ""
 
+    def imagem(self, r):
+        raise OSError("sem tela")
+
     def fracao_azul(self, r):
         return 0.0
 

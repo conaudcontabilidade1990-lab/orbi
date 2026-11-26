@@ -59,6 +59,7 @@ for arq, xis_esp, opcoes in (
     assert any(p[0].startswith("fech") for p in pal), pal
 # 3) Resumo dos Dados só com erros (NFS-e tomada lida como 'prestado'): abas, Gravar apagado e nº do documento
 atual["img"] = Image.open(F / "resumo_guia_erros.png").convert("RGB")
+print("resumo:", t.botoes_fechar("area_janelas"), [imp._titulo_da_janela(t, b) for b in t.botoes_fechar("area_janelas")])
 rx, ry = imp._janela(t, "resumo")
 ax, ay, aw, ah = imp.RES_ABAS
 abas = (max(0, rx + ax), ry + ay, aw, ah)
