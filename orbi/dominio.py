@@ -16,6 +16,8 @@ def trazer_para_frente(t):
     """Garante o Domínio na frente, maximizado no monitor principal. Se já estiver, segue direto;
     senão acha a janela (mesmo atrás de outra, minimizada ou no outro monitor) e confere pelo título."""
     if "dominio escrita fiscal" in t.ler("titulo_app"):
+        # visível não quer dizer ativo: o 1º clique numa janela inativa só a ativa
+        t.clicar("titulo_app", espera=0.3)
         return
     from . import janela
     candidatas, diag = janela.achar()
@@ -51,8 +53,13 @@ def trocar_empresa(t, codigo):
         t.log(f"  empresa {codigo} já está ativa")
         return
     espera = t.T.get("troca", 8)
-    t.clicar("troca_empresa", espera=0.2)
-    if t.esperar("troca_titulo", {"ok": ["troca de empresa"]}, espera, intervalo=0.25) != "ok":
+    abriu = False
+    for tentativa, limite in ((1, 3), (2, espera)):   # se o 1º clique não abrir, tenta mais uma vez
+        t.clicar("troca_empresa", espera=0.2)
+        if t.esperar("troca_titulo", {"ok": ["troca de empresa"]}, limite, intervalo=0.25) == "ok":
+            abriu = True
+            break
+    if not abriu:
         if t.esperar("mensagem", {"x": MSG["fechar_janelas"]}, 1):
             raise Parar("O Domínio pediu para fechar todas as janelas antes de trocar de empresa.")
         raise Parar("A janela Troca de empresas não abriu.")
