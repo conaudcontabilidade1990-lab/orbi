@@ -10,7 +10,7 @@ import time
 import unicodedata
 
 import pyautogui
-from PIL import Image, ImageOps
+from PIL import Image, ImageChops, ImageOps
 
 from . import config as cfgmod
 
@@ -199,6 +199,44 @@ def codigo_da_linha_azul(img_lista, x_amostra, x0, x1):
     return numero_de_imagem(ImageOps.invert(ImageOps.grayscale(cod)))
 
 
+
+def botoes_fechar(img):
+    """Centros (x, y) dos botões vermelhos de fechar [X] de janelas internas do Domínio na imagem.
+    O botão é uma faixa vermelha de 20 a 40 px de largura com um X branco no meio."""
+    r, g, b = img.convert("RGB").split()
+    mascara = ImageChops.multiply(ImageChops.multiply(
+        r.point(lambda v: 255 if v > 160 else 0), g.point(lambda v: 255 if v < 140 else 0)),
+        b.point(lambda v: 255 if v < 120 else 0))
+    caixa = mascara.getbbox()
+    if not caixa:
+        return []
+    px = img.convert("RGB").load()
+    m = mascara.load()
+    w, h = img.size
+    achados = []
+    for y in range(caixa[1], caixa[3]):
+        x = caixa[0]
+        while x < caixa[2]:
+            if not m[x, y]:
+                x += 1
+                continue
+            ini = x
+            while x < caixa[2] and m[x, y] and px[x, y][0] - px[x, y][1] > 60:
+                x += 1
+            n = x - ini
+            x += 1
+            if not 20 <= n <= 40:
+                continue
+            cx = ini + n // 2
+            if any(abs(cx - a) < 20 and abs(y - c) < 25 for a, c in achados):
+                continue
+            brancos = sum(1 for yy in range(max(0, y - 11), max(0, y - 2)) for xx in range(max(0, cx - 7), min(w, cx + 8))
+                          if min(px[xx, yy]) > 215)
+            if brancos >= 4:
+                achados.append((cx, y))
+    return [(cx, max(0, y - 6)) for cx, y in achados]
+
+
 class Tela:
     def __init__(self, cfg, log, parar_evento=None):
         self.cfg = cfg
@@ -310,6 +348,12 @@ class Tela:
             if aceita(n):
                 return int(x0 + x + lw / 2), int(y0 + y + lh / 2), n
         return None
+
+    def botoes_fechar(self, regiao):
+        """Botões [X] de janelas internas abertas dentro da região (coordenadas de tela)."""
+        self.checar()
+        x0, y0, w, h = self.regiao(regiao)
+        return [(x0 + x, y0 + y) for x, y in botoes_fechar(pyautogui.screenshot(region=(x0, y0, w, h)))]
 
     def clicar_em(self, x, y, espera=None):
         self.checar()

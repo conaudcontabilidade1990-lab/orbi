@@ -50,6 +50,7 @@ PADRAO = {
     "regioes": {
         "titulo_app": [0, 0, 700, 24],          # título do Domínio; com janela maximizada traz [Gerar Parcelas...]
         "mensagem": [250, 300, 866, 180],
+        "area_janelas": [0, 130, 1290, 565],    # onde ficam as janelas internas soltas (procura o [X] vermelho)
         "empresa_ativa": [1150, 60, 216, 52],   # "NOME DA EMPRESA - 611" (normal ou com janela maximizada)
         "empresa_codigo": [1290, 60, 76, 52],   # só o "- 611" (o OCR às vezes pula o código na linha inteira)
         "troca_titulo": [433, 133, 250, 18],    # título "Troca de empresas"

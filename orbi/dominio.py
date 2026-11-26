@@ -49,15 +49,32 @@ def empresa_ativa_e(t, codigo):
 
 
 def fechar_janelas_abertas(t):
-    """Fecha janelas internas que tenham ficado abertas (ex.: Gerar Parcelas de uma rodada
-    interrompida). Com janela interna aberta o Domínio não abre a Troca de empresas."""
+    """Fecha TODAS as janelas internas abertas no Domínio antes de trocar de empresa: com qualquer
+    janela aberta o Domínio recusa a troca ("terá que fechar todas as janelas abertas")."""
+    # 1) janela maximizada (o título dela aparece entre [ ] no título do Domínio)
     for _ in range(3):
         titulo = t.ler("titulo_app")
         if "[" not in titulo and "gerar parcelas" not in titulo:
-            return
+            break
         t.log(f"  fechando janela que ficou aberta: {titulo[titulo.find('['):][:60]}")
         fechar_janela(t)
-    raise Parar("Há uma janela aberta no Domínio que não consegui fechar. Feche-a e rode de novo.")
+    else:
+        raise Parar("Há uma janela aberta no Domínio que não consegui fechar. Feche-a e rode de novo.")
+    # 2) janelas soltas (não maximizadas): acha o botão vermelho [X] de cada uma e fecha
+    for _ in range(10):
+        botoes = t.botoes_fechar("area_janelas")
+        if not botoes:
+            return
+        x, y = botoes[0]
+        nome = t.ler((max(0, x - 640), max(0, y - 9), 600, 18))
+        t.log(f"  fechando janela aberta: {nome[:60] or '(sem título)'}")
+        t.clicar_em(x, y, espera=0.3)
+        if t.aguardar(lambda: len(t.botoes_fechar("area_janelas")) < len(botoes), 3, intervalo=0.3):
+            continue
+        aviso = t.ler("mensagem")
+        raise Parar(f"A janela '{nome[:60]}' não fechou" + (f" (o Domínio perguntou: '{aviso[:120]}')" if aviso else "")
+                    + ". Não respondi nada; feche-a e rode de novo.")
+    raise Parar("Há janelas demais abertas no Domínio. Feche-as e rode de novo.")
 
 
 def _digitos_canto(t):
@@ -81,7 +98,7 @@ def _confirmado_pela_linha(t, linha_ok, antes, codigo):
     return False
 
 
-def trocar_empresa(t, codigo):
+def trocar_empresa(t, codigo, _tentativa=1):
     fechar_janelas_abertas(t)
     if empresa_ativa_e(t, codigo):
         t.log(f"  empresa {codigo} já está ativa")
@@ -95,7 +112,11 @@ def trocar_empresa(t, codigo):
             break
     if not abriu:
         if t.esperar("mensagem", {"x": MSG["fechar_janelas"]}, 1):
-            raise Parar("O Domínio pediu para fechar todas as janelas antes de trocar de empresa.")
+            t.clicar("btn_ok_vazio", espera=0.5)
+            if _tentativa > 1:
+                raise Parar("O Domínio continua pedindo para fechar todas as janelas antes de trocar de empresa.")
+            t.log("  o Domínio pediu para fechar as janelas abertas; fechando e tentando de novo")
+            return trocar_empresa(t, codigo, _tentativa + 1)
         raise Parar("A janela Troca de empresas não abriu.")
     t.clicar("troca_por_codigo")          # a busca pode estar em "Apelido"
     t.clicar("troca_busca")
@@ -120,6 +141,14 @@ def trocar_empresa(t, codigo):
     linha_ok = lido == codigo                    # a linha azul confirmou o código pelo desenho
     antes = _digitos_canto(t)
     t.clicar("troca_acessar", espera=0.5)
+    if MSG["fechar_janelas"][0] in t.ler("mensagem"):
+        # sobrou alguma janela que não foi vista antes: OK no aviso, fecha a Troca, fecha tudo e tenta de novo
+        t.clicar("btn_ok_vazio", espera=0.5)
+        t.clicar("troca_fechar", espera=0.5)
+        if _tentativa > 1:
+            raise Parar("O Domínio continua pedindo para fechar todas as janelas antes de trocar de empresa.")
+        t.log("  o Domínio pediu para fechar as janelas abertas; fechando e tentando de novo")
+        return trocar_empresa(t, codigo, _tentativa + 1)
     if not t.aguardar(lambda: empresa_ativa_e(t, codigo), espera, intervalo=0.4) \
             and not _confirmado_pela_linha(t, linha_ok, antes, codigo):
         raise Pular(f"A empresa ativa não ficou {codigo} (lido no canto: '{t.ler('empresa_ativa')}' / "

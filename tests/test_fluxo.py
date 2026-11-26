@@ -29,6 +29,7 @@ class Dominio:
         self.avisos, self.gerados = [], []
         self.tempo = 0.0
         self._buscou = False
+        self.soltas, self.ocultas, self.teimosa, self.aviso_fechar = [], 0, False, False
         self.log = lambda m: None
 
     # ações
@@ -39,7 +40,12 @@ class Dominio:
         if n == "caixa_nao_geram": self.caixa2 = not self.caixa2
         if n.startswith("menu_") and n not in ("menu_utilitarios", "menu_parcelas", "menu_gerar"): self.janela = True
         if n == "fechar_janela": self.janela, self.filtro = False, False
-        if n == "troca_acessar": self.empresa = self._cod
+        if n == "troca_acessar":
+            if self.soltas or self.ocultas: self.aviso_fechar = True
+            else: self.empresa = self._cod
+        if n == "btn_ok_vazio" and self.aviso_fechar:
+            self.aviso_fechar = False
+            self.soltas += ["oculta"] * self.ocultas; self.ocultas = 0   # a janela escondida atrás da Troca aparece
         if n == "busca_avancada": self.ba = True
         if n == "ba_cancelar": self.ba = False
         if n == "ba_ok": self.ba, self.filtro, self._buscou = False, True, True
@@ -91,7 +97,13 @@ class Dominio:
             if aceita(n):
                 return (100 + i, 200, n)
         return None
+    def botoes_fechar(self, r):
+        return [(900 + i, 300) for i in range(len(self.soltas))]
     def clicar_em(self, x, y, espera=None):
+        if x >= 900:
+            self.cl.append("fechar_solta")
+            if not self.teimosa: self.soltas.pop(x - 900)
+            return
         rot = self.MENU[x - 100]
         self.cl.append("menu:" + rot)
         if rot.lower().startswith(self.menu[:4]):
@@ -118,7 +130,8 @@ class Dominio:
                 "ba_linha": "cumulador igual a 255",
                 "ba_coluna_cel": "acumulador", "ba_condicao_cel": "igual a", "ba_valor_cel": "2554",
                 "campo_vencimento": "informar",
-                "mensagem": "nao foram encontrados registros" if (self._buscou and not self._tem()) else "",
+                "mensagem": "para trocar de empresa voce tera que fechar todas as janelas abertas." if self.aviso_fechar
+                            else "nao foram encontrados registros" if (self._buscou and not self._tem()) else "",
                 "dialogo_gerar": self._dialogo()}.get(r, "")
     def esperar(self, r, alvos, timeout, intervalo=1):
         if "ok" in alvos: return "ok" if self.ler(r) else None
@@ -191,3 +204,17 @@ try:
 except Exception as e:
     assert type(e).__name__ == "Pular", e; print("canto errado sem linha: pulou")
 print("ok: fluxos das rotinas")
+
+# janelas soltas abertas: fecha todas antes de trocar de empresa
+dm = Dominio(); dm.soltas = ["a", "b"]; d.trocar_empresa(dm, "77")
+assert dm.empresa == "77" and dm.soltas == [] and dm.cl.count("fechar_solta") == 2, dm.cl
+# janela que só aparece depois do aviso do Domínio: OK, fecha a Troca, fecha a janela e tenta de novo
+dm = Dominio(); dm.ocultas = 1; d.trocar_empresa(dm, "78")
+assert dm.empresa == "78" and "troca_fechar" in dm.cl and dm.cl.count("fechar_solta") == 1, dm.cl
+# janela que não fecha: para sem responder nada
+dm = Dominio(); dm.soltas = ["x"]; dm.teimosa = True
+try:
+    d.trocar_empresa(dm, "79"); raise AssertionError("devia parar")
+except Parar as e:
+    assert "não fechou" in str(e) and dm.empresa == "315", e
+print("ok: fecha janelas abertas antes de trocar de empresa")
