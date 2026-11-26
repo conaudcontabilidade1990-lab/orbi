@@ -1313,7 +1313,34 @@ class App:
         self.root.destroy()
 
 
+_MUTEX = []
+
+
+def _unica_copia():
+    """Só uma cópia do Orbi por vez (duas cópias rodariam a Agenda duas vezes). Espera até 10 s porque,
+    depois de uma atualização, a cópia antiga ainda pode estar fechando."""
+    if not getattr(sys, "frozen", False):
+        return True
+    k32 = ctypes.windll.kernel32
+    k32.CreateMutexW.restype = ctypes.c_void_p
+    for _ in range(40):
+        h = k32.CreateMutexW(None, False, "Local\\OrbiConaudContabilidade")
+        if k32.GetLastError() != 183:          # 183 = já existe
+            _MUTEX.append(h)
+            return True
+        k32.CloseHandle(ctypes.c_void_p(h))
+        time.sleep(0.25)
+    return False
+
+
 def main():
+    if not _unica_copia():
+        r = tk.Tk()
+        r.withdraw()
+        messagebox.showinfo("Orbi", "O Orbi já está aberto.\n\nProcure o ícone dele perto do relógio "
+                                    "(setinha ^ da barra de tarefas) e clique nele para abrir a janela.")
+        r.destroy()
+        return
     root = ctk.CTk()
     app = App(root)
     app.iniciar_bandeja()

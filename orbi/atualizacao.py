@@ -26,12 +26,14 @@ def eh_executavel():
 
 
 def limpar_antigo():
+    """Apaga Orbi.old / Orbi.old-123... deixados por atualizações (os que não estiverem em uso)."""
     if eh_executavel():
-        antigo = Path(sys.executable).with_suffix(".old")
-        try:
-            antigo.unlink(missing_ok=True)
-        except OSError:
-            pass
+        exe = Path(sys.executable)
+        for antigo in exe.parent.glob(exe.stem + ".old*"):
+            try:
+                antigo.unlink()
+            except OSError:
+                pass
 
 
 def verificar():
@@ -67,7 +69,11 @@ def aplicar(url, progresso=lambda txt: None):
     if novo.stat().st_size < 1_000_000:
         novo.unlink(missing_ok=True)
         raise RuntimeError("Arquivo baixado parece incompleto.")
-    antigo.unlink(missing_ok=True)
+    try:
+        antigo.unlink(missing_ok=True)
+    except OSError:              # o .old ainda está em uso (outra cópia aberta): usa outro nome
+        import time
+        antigo = exe.with_suffix(f".old-{int(time.time())}")
     os.replace(exe, antigo)      # renomeia o .exe em uso
     os.replace(novo, exe)
     progresso("reiniciando...")
