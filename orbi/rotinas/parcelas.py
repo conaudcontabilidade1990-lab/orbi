@@ -98,6 +98,17 @@ class GerarParcelas(Rotina):
             raise Parar("Não vi 'Parcelas geradas com sucesso.' no tempo limite. NÃO gerei de novo.")
         t.clicar("btn_ok_sucesso", espera=0.6)
 
+    def _fechar_dialogo_apos_gerar(self, t):
+        """Depois do OK do sucesso o Domínio mostra de novo o diálogo Gerar: espera ele voltar e cancela."""
+        dialogo = lambda: "quantidade de parcelas" in t.ler("dialogo_gerar")  # noqa: E731
+        if t.aguardar(dialogo, 4, intervalo=0.3):
+            t.clicar("dlg_cancelar", espera=0.4)
+            if t.aguardar(lambda: not dialogo(), 3, intervalo=0.3) is False:
+                t.clicar("dlg_cancelar", espera=0.6)   # segunda tentativa
+                if dialogo():
+                    raise Parar("O diálogo Gerar não fechou depois de gerar. As parcelas foram geradas; "
+                                "parei antes da conferência.")
+
     # ---- por empresa ----
     def executar_empresa(self, t, codigo, simular):
         d.trazer_para_frente(t)
@@ -116,8 +127,7 @@ class GerarParcelas(Rotina):
             return "SIMULAÇÃO ok — diálogo conferido e cancelado, nada gerado"
 
         self._gerar(t)
-        if "quantidade de parcelas" in t.ler("dialogo_gerar"):
-            t.clicar("dlg_cancelar", espera=0.5)
+        self._fechar_dialogo_apos_gerar(t)
         # conferência: fecha, reabre e busca de novo — deve vir vazio
         d.fechar_janela(t)
         d.abrir_gerar_parcelas(t, self.ponto_menu, self.palavra_titulo)
@@ -195,8 +205,7 @@ class GerarParcelasEntradas(GerarParcelas):
         d.abrir_gerar_parcelas(t, self.ponto_menu, self.palavra_titulo)
 
     def _cancelar_dialogo_aberto(self, t):
-        if "quantidade de parcelas" in t.ler("dialogo_gerar"):
-            t.clicar("dlg_cancelar", espera=0.5)
+        self._fechar_dialogo_apos_gerar(t)
 
     def executar_empresa(self, t, codigo, simular):
         d.trazer_para_frente(t)

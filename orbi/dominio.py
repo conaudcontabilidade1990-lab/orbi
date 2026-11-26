@@ -127,5 +127,16 @@ def garantir_caixa(t, ponto, marcada):
 
 
 def fechar_janela(t):
+    """Fecha a janela Gerar Parcelas e confere pelo título. Se um diálogo esquecido bloquear,
+    cancela o diálogo e tenta de novo."""
+    fechou = lambda: "gerar parcelas" not in t.ler("titulo_app")  # noqa: E731
     t.clicar("fechar_janela", espera=0.3)
-    t.aguardar(lambda: "gerar parcelas" not in t.ler("titulo_app"), 3)
+    if t.aguardar(fechou, 3):
+        return
+    if "quantidade de parcelas" in t.ler("dialogo_gerar"):
+        t.clicar("dlg_cancelar", espera=0.6)
+    elif "busca avan" in t.ler("ba_titulo"):
+        t.clicar("ba_cancelar", espera=0.6)
+    t.clicar("fechar_janela", espera=0.3)
+    if not t.aguardar(fechou, 3):
+        raise Parar("Não consegui fechar a janela Gerar Parcelas (título continua aberto).")

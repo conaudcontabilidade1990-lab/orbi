@@ -52,6 +52,10 @@ class Dominio:
             if self.filtro: self.n2554 = False
             else: self.ndemais = False
             self.dlg = False
+            self._volta_dialogo = 2      # o Domínio reapresenta o diálogo um pouco depois do OK
+        if n == "fechar_janela" and self.dlg:
+            self.janela = True           # com diálogo aberto, o X da janela é ignorado
+            self.cl.append("fechar_ignorado")
 
     def duplo(self, *a, **k): pass
     def _tem(self):
@@ -64,7 +68,11 @@ class Dominio:
     def teclas(self, *a): pass
     def dormir(self, s): self.tempo += s
     def aguardar(self, cond, timeout, intervalo=0.25):
-        r = cond()
+        for _ in range(int(timeout / max(intervalo, 0.1)) + 1):
+            r = cond()
+            if r:
+                return r
+            self.tempo += intervalo
         return r
     def checar(self): pass
     def caixa_marcada(self, p): return self.caixa1 if p == "caixa_sem_parcelas" else self.caixa2
@@ -74,6 +82,15 @@ class Dominio:
     def ler_linha_destacada(self, r, x): return f"{self._cod} empresa"
     def ler_codigo_destacado(self, *a): return getattr(self, "lista_mostra", None) or self._cod
     def achar_texto(self, *a): return None
+    def _dialogo(self):
+        v = getattr(self, "_volta_dialogo", 0)
+        if v:
+            self._volta_dialogo = v - 1
+            if v == 1:
+                self.dlg = True
+            return ""
+        return "quantidade de parcelas vencimento" if self.dlg else ""
+
     def ler_numero(self, r):
         if r == "campo_parcelas": return "1"
         if r == "ba_valor_cel": return "2554"
@@ -87,7 +104,7 @@ class Dominio:
                 "ba_coluna_cel": "acumulador", "ba_condicao_cel": "igual a", "ba_valor_cel": "2554",
                 "campo_vencimento": "informar",
                 "mensagem": "nao foram encontrados registros" if (self._buscou and not self._tem()) else "",
-                "dialogo_gerar": "quantidade de parcelas vencimento" if self.dlg else ""}.get(r, "")
+                "dialogo_gerar": self._dialogo()}.get(r, "")
     def esperar(self, r, alvos, timeout, intervalo=1):
         if "ok" in alvos: return "ok" if self.ler(r) else None
         if "vazio" in alvos:
