@@ -183,7 +183,13 @@ class Tela:
         self.P = cfg["pontos"]
         self.R = cfg["regioes"]
         self.T = cfg["tempos"]
+        self.avisos = []
         cfgmod.PASTA_LOGS.mkdir(parents=True, exist_ok=True)
+
+    def aviso(self, msg):
+        """Algo fora do comum que não impediu a rotina (vira 'advertência' no Painel)."""
+        self.avisos.append(msg)
+        self.log(f"  ⚠ {msg}")
 
     # ---- controle ----
     def checar(self):

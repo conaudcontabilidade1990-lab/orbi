@@ -59,7 +59,7 @@ def trocar_empresa(t, codigo):
         linha = t.ler_linha_destacada("troca_lista", xa)
     if not padrao.match(linha):
         # a leitura de texto branco sobre azul falha às vezes; quem decide é o canto da tela
-        t.log(f"  (linha selecionada lida como '{linha}'; vou confirmar pelo canto da tela)")
+        t.aviso(f"linha selecionada lida como '{linha}'; confirmei pelo canto da tela")
     t.clicar("troca_acessar", espera=3)
     fim = time.time() + espera
     while not empresa_ativa_e(t, codigo):

@@ -5,6 +5,7 @@ Só leitura: confere e-mail/senha no Firebase Auth e lê o perfil em users/{uid}
 """
 import json
 import urllib.error
+import urllib.parse
 import urllib.request
 from dataclasses import dataclass, field
 
@@ -39,6 +40,7 @@ class Usuario:
     nome: str
     role: str
     acessos: list | None = field(default=None)
+    refresh_token: str = field(default="", repr=False)
 
     @property
     def admin(self):
@@ -107,7 +109,26 @@ def entrar(email, senha):
             raise ErroLogin("Muitas tentativas. Aguarde alguns minutos.") from None
         raise ErroLogin(MENSAGENS.get(cod, f"Não foi possível entrar ({cod}).")) from None
 
-    uid, token = auth["localId"], auth["idToken"]
+    return _perfil(auth["localId"], auth["idToken"], email, auth.get("refreshToken", ""))
+
+
+def renovar(email, refresh_token):
+    """Entra de novo com a sessão guardada (sem senha) e relê o perfil — se a pessoa foi
+    desativada ou perdeu acessos no portal, isso vale na hora."""
+    req = urllib.request.Request(
+        f"https://securetoken.googleapis.com/v1/token?key={API_KEY}",
+        data=urllib.parse.urlencode({"grant_type": "refresh_token", "refresh_token": refresh_token}).encode(),
+        method="POST", headers={"Content-Type": "application/x-www-form-urlencoded"})
+    try:
+        r = _abrir(req)
+    except ErroLogin as e:
+        if str(e) == "SEM_CONEXAO":
+            raise ErroLogin(MENSAGENS["SEM_CONEXAO"]) from None
+        raise ErroLogin("A sessão guardada expirou. Entre com a senha.") from None
+    return _perfil(r["user_id"], r["id_token"], email, r.get("refresh_token", refresh_token))
+
+
+def _perfil(uid, token, email, refresh_token):
     req = urllib.request.Request(
         f"https://firestore.googleapis.com/v1/projects/{PROJETO}/databases/(default)/documents/users/{uid}",
         headers={"Authorization": f"Bearer {token}"})
@@ -126,4 +147,4 @@ def entrar(email, senha):
         raise ErroLogin("Este tipo de conta não pode usar o Orbi.")
     acessos = campos.get("acessos")
     return Usuario(uid=uid, email=email, nome=campos.get("name") or email, role=role,
-                   acessos=acessos if isinstance(acessos, list) else None)
+                   acessos=acessos if isinstance(acessos, list) else None, refresh_token=refresh_token)

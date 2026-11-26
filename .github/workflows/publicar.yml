@@ -39,8 +39,15 @@ jobs:
       - name: Teste da leitura de números
         run: python tests/test_numeros.py
 
-      - name: Teste da janela (login e departamentos)
+      - name: Teste da janela (login, departamentos, tema, borda) + prints
         run: python tests/test_app.py
+
+      - name: Guardar prints da janela
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: prints
+          path: prints/
 
       - name: Teste do login no Firebase do portal
         run: python tests/test_login_firebase.py
@@ -61,7 +68,7 @@ jobs:
       - name: Montar Orbi.exe
         run: >
           pyinstaller --noconfirm --onefile --windowed --name Orbi --icon orbi.ico
-          --collect-all winrt --hidden-import _overlapped --hidden-import asyncio main.py
+          --collect-all winrt --collect-all customtkinter --add-data "orbi.ico;." --add-data "orbi/recursos;orbi/recursos" --hidden-import _overlapped --hidden-import asyncio main.py
 
       - name: Teste do OCR (Orbi.exe)
         run: |
