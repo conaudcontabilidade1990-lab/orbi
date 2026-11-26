@@ -130,12 +130,15 @@ class ImportarXml(SepararXml):
             return ""
 
     def _no_dominio(self, t, caminho):
-        """C:\\... deste computador -> unidade que o Domínio enxerga (padrão M:)."""
+        """Caminho deste computador -> como o Domínio (remoto) enxerga: C: vira M:, Z: (servidor) continua Z:."""
         p = str(caminho)
-        if not re.match(r"^[cC]:\\", p):
+        mapa = {k.upper(): v for k, v in (t.cfg.get("unidades_dominio") or {"C:": t.cfg.get("dominio_unidade", "M:")}).items()}
+        unidade = p[:2].upper()
+        if unidade not in mapa:
             from ..tela import Parar
-            raise Parar(f"A pasta dos XML precisa estar no disco C: deste computador (está em '{p}').")
-        return t.cfg.get("dominio_unidade", "M:") + p[2:]
+            raise Parar(f"Não sei como o Domínio enxerga o disco {unidade} (pasta '{p}'). "
+                        f"Discos conhecidos: {', '.join(mapa)}.")
+        return mapa[unidade] + p[2:]
 
     def executar_empresa(self, t, codigo, simular):
         from .. import dominio as d

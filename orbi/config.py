@@ -26,6 +26,7 @@ PADRAO = {
         "importacao": 1800,     # espera o Domínio carregar/gravar uma importação de XML
     },
     "dominio_unidade": "M:",    # como o disco C: deste computador aparece no Domínio (GraphOn)
+    "unidades_dominio": {"C:": "M:", "Z:": "Z:"},   # disco deste computador -> como o Domínio enxerga
     "limiar_caixa": 6,          # pixels escuros no centro da caixa = marcada
     # Pontos de clique (x, y) em 1366x768
     "pontos": {

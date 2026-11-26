@@ -5,6 +5,7 @@ troca o executável (o Windows permite renomear um .exe em uso) e reabre sozinho
 Sem .bat, sem arquivos extras.
 """
 import json
+import time
 import os
 import subprocess
 import sys
@@ -81,13 +82,67 @@ def aplicar(url, progresso=lambda txt: None):
     os._exit(0)
 
 
-def reabrir(exe):
+def reabrir(exe, args=()):
     """Abre uma cópia nova e independente do Orbi.exe.
 
     Sem isso, o PyInstaller faria a nova cópia reaproveitar a pasta temporária desta,
     que é apagada quando esta fecha (faltariam módulos, ex.: winrt._winrt)."""
     env = {k: v for k, v in os.environ.items() if not k.startswith(("_MEI", "_PYI"))}
     env["PYINSTALLER_RESET_ENVIRONMENT"] = "1"
-    subprocess.Popen([str(exe)], env=env, close_fds=True,
+    subprocess.Popen([str(exe), *args], env=env, close_fds=True,
                      creationflags=getattr(subprocess, "DETACHED_PROCESS", 0)
                      | getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0))
+
+
+def pasta_local():
+    """Onde o Orbi fica instalado em cada computador (cada um se atualiza sozinho pelo GitHub)."""
+    return Path(os.environ.get("LOCALAPPDATA", str(Path.home() / "AppData" / "Local"))) / "Programs" / "Orbi"
+
+
+def _atalho(destino_lnk, alvo, args=""):
+    cmd = ("$s=(New-Object -ComObject WScript.Shell).CreateShortcut($env:LNK);"
+           "$s.TargetPath=$env:ALVO;$s.Arguments=$env:ARGS;$s.WorkingDirectory=(Split-Path $env:ALVO);"
+           "$s.IconLocation=$env:ALVO+',0';$s.Save()")
+    env = dict(os.environ, LNK=str(destino_lnk), ALVO=str(alvo), ARGS=args)
+    subprocess.run(["powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", cmd],
+                   env=env, timeout=30, creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
+
+
+def instalar_se_no_servidor():
+    """Aberto de outra pasta (ex.: Z:\\Orbi no servidor): copia para a pasta local deste computador,
+    cria o atalho na Área de Trabalho e no Menu Iniciar e reabre a cópia local.
+
+    Rodar direto do servidor travaria as atualizações (o .exe em uso por 4 computadores não pode
+    ser trocado) — por isso o servidor serve só para distribuir/instalar."""
+    if not eh_executavel():
+        return False
+    exe = Path(sys.executable).resolve()
+    local = pasta_local()
+    if exe.parent == local.resolve() or os.environ.get("ORBI_NAO_INSTALAR"):
+        return False
+    import shutil
+    local.mkdir(parents=True, exist_ok=True)
+    destino = local / "Orbi.exe"
+    copiar = True
+    if destino.exists():
+        try:
+            copiar = destino.stat().st_size != exe.stat().st_size
+        except OSError:
+            pass
+    if copiar:
+        temp = local / "Orbi.exe.new"
+        shutil.copy2(exe, temp)
+        try:
+            destino.unlink(missing_ok=True)
+        except OSError:
+            destino = local / f"Orbi-{int(time.time())}.exe"
+        os.replace(temp, destino)
+    for pasta in (Path.home() / "Desktop",
+                  Path(os.environ.get("APPDATA", "")) / "Microsoft" / "Windows" / "Start Menu" / "Programs"):
+        try:
+            if pasta.is_dir():
+                _atalho(pasta / "Orbi.lnk", destino)
+        except Exception:
+            pass
+    reabrir(destino, sys.argv[1:])
+    return True
