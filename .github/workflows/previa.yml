@@ -1,0 +1,26 @@
+name: Prévia visual
+on:
+  push:
+    branches: [previa]
+permissions:
+  contents: write
+jobs:
+  prints:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -r requirements.txt
+      - run: python tests/test_fluxo.py
+      - run: python tests/test_app.py
+      - name: Gravar prints no ramo visual-prints (só dados de teste)
+        if: always()
+        shell: bash
+        run: |
+          git config user.name "orbi-ci"; git config user.email "ci@orbi"
+          git checkout --orphan visual-prints
+          git rm -rq --cached . ; git add -f prints/
+          git commit -qm "prints $GITHUB_SHA"
+          git push -f origin visual-prints
