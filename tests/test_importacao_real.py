@@ -38,6 +38,8 @@ for arq, xis_esp, opcoes in (
         ("importacao_nfe.png", (1040, 142), [("Todos", 498)]),
         ("importacao_cte.png", (1000, 183), [("Notas de entradas", 409), ("Notas canceladas", 451)])):
     atual["img"] = Image.open(F / arq).convert("RGB")
+    print(arq, "botões [X]:", t.botoes_fechar("area_janelas"),
+          [imp._titulo_da_janela(t, b) for b in t.botoes_fechar("area_janelas")])
     xis = imp._janela_importacao(t)
     print(arq, "X:", xis, "título:", imp._titulo_da_janela(t, xis) if xis else None)
     assert xis and perto(xis, xis_esp, 6), xis

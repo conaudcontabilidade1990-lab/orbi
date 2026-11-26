@@ -111,9 +111,14 @@ def _titulo_da_janela(t, xis):
     return t.ler((x0, max(0, y - 11), x - x0 - 60, 22))
 
 
+def _e_importacao(titulo):
+    # o OCR às vezes lê 'Importação Padrão' como 'importaqao 2adrao'
+    return any(k in titulo for k in ("importa", "padrao", "adrao")) and "resumo" not in titulo
+
+
 def _janela_importacao(t):
     for xis in t.botoes_fechar("area_janelas"):
-        if "importacao padrao" in _titulo_da_janela(t, xis):
+        if _e_importacao(_titulo_da_janela(t, xis)):
             return xis
     return None
 
@@ -221,7 +226,7 @@ def importar_e_gravar(t, xis, simular, log):
             return None
         if "nao" in msg and any(k in msg for k in ("encontrad", "nenhum", "nao existem", "nao ha ")):
             return ("vazio", msg)
-        rx = _janela(t, "resumo dos dados")
+        rx = _janela(t, "resumo")
         return ("resumo", rx) if rx else None
     r = t.aguardar(chegou, limite, intervalo=1.0)
     if not r:
@@ -254,7 +259,7 @@ def importar_e_gravar(t, xis, simular, log):
         if not cancelar:
             raise Parar("Não achei o botão Cancelar do Resumo dos Dados.")
         t.clicar_em(*_centro(cancelar), espera=1.0)
-        t.aguardar(lambda: not _janela(t, "resumo dos dados"), 10, intervalo=0.5)
+        t.aguardar(lambda: not _janela(t, "resumo"), 10, intervalo=0.5)
         return "simulação: chegou ao Resumo dos Dados e cancelou (nada gravado)"
 
     gravar = next((p for p in botoes if p[0] == "gravar"), None)
@@ -285,7 +290,7 @@ def importar_e_gravar(t, xis, simular, log):
                limite, intervalo=1.5)
     if cancelar:
         t.clicar_em(*_centro(cancelar), espera=1.0)   # fecha o Resumo (já gravado)
-    t.aguardar(lambda: not _janela(t, "resumo dos dados"), 10, intervalo=0.5)
+    t.aguardar(lambda: not _janela(t, "resumo"), 10, intervalo=0.5)
     txt = resultado["txt"]
     i = txt.find("produtos")
     return re.sub(r"\s+", " ", txt[i if i >= 0 else 0:])[:300]
