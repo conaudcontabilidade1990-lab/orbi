@@ -161,4 +161,7 @@ try:
 except Pular as e:
     print("pulou ok:", str(e)[:60]); assert not dm.gerados and "menu_utilitarios" not in dm.cl
 Dominio.clicar = _orig
+# janela Gerar Parcelas esquecida aberta de outra rodada: fecha antes da troca
+dm = Dominio(tem_2554=False, menu="saidas"); dm.janela = True
+print(sai.executar_empresa(dm, "214", False)); assert dm.cl.index("fechar_janela") < dm.cl.index("troca_empresa"), dm.cl[:8]
 print("ok: fluxos das rotinas")

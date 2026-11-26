@@ -48,7 +48,20 @@ def empresa_ativa_e(t, codigo):
     return False
 
 
+def fechar_janelas_abertas(t):
+    """Fecha janelas internas que tenham ficado abertas (ex.: Gerar Parcelas de uma rodada
+    interrompida). Com janela interna aberta o Domínio não abre a Troca de empresas."""
+    for _ in range(3):
+        titulo = t.ler("titulo_app")
+        if "[" not in titulo and "gerar parcelas" not in titulo:
+            return
+        t.log(f"  fechando janela que ficou aberta: {titulo[titulo.find('['):][:60]}")
+        fechar_janela(t)
+    raise Parar("Há uma janela aberta no Domínio que não consegui fechar. Feche-a e rode de novo.")
+
+
 def trocar_empresa(t, codigo):
+    fechar_janelas_abertas(t)
     if empresa_ativa_e(t, codigo):
         t.log(f"  empresa {codigo} já está ativa")
         return
@@ -129,7 +142,7 @@ def garantir_caixa(t, ponto, marcada):
 def fechar_janela(t):
     """Fecha a janela Gerar Parcelas e confere pelo título. Se um diálogo esquecido bloquear,
     cancela o diálogo e tenta de novo."""
-    fechou = lambda: "gerar parcelas" not in t.ler("titulo_app")  # noqa: E731
+    fechou = lambda: (lambda x: "gerar parcelas" not in x and "[" not in x)(t.ler("titulo_app"))  # noqa: E731
     t.clicar("fechar_janela", espera=0.3)
     if t.aguardar(fechou, 3):
         return
