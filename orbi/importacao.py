@@ -305,7 +305,7 @@ def importar_e_gravar(t, xis, simular, log, numeros_erro=None):
         return "simulação: chegou ao Resumo dos Dados e cancelou (nada gravado)"
 
     gravar = next((p for p in botoes if p[0].startswith("grav") and not p[0].startswith("gravad")), None)
-    registros = _palavra(t, abas, lambda w: w.startswith("registro"))
+    registros = _palavra(t, abas, lambda w: w.startswith("regis"))
     desabilitado = (gravar and t.escuros_em(*_centro(gravar)) < 6) or \
         (registros and t.escuros_em(*_centro(registros)) < 6)
     if not gravar and not desabilitado:

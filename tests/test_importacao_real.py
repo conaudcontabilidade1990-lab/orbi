@@ -65,7 +65,7 @@ ax, ay, aw, ah = imp.RES_ABAS
 abas = (max(0, rx + ax), ry + ay, aw, ah)
 pal = t.palavras(abas, contraste=True)
 print("abas:", [(p[0], t.escuros_em(*imp._centro(p))) for p in pal])
-reg = next(p for p in pal if p[0].startswith("registro"))
+reg = next(p for p in pal if p[0].startswith("regis"))
 err = next(p for p in pal if p[0].startswith("erro"))
 assert t.escuros_em(*imp._centro(reg)) < 6 and t.escuros_em(*imp._centro(err)) >= 6
 gx, gy, gw, gh = imp.RES_GRADE
