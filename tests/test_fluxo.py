@@ -102,6 +102,7 @@ class Dominio:
     def clicar_em(self, x, y, espera=None):
         if x >= 900:
             self.cl.append("fechar_solta")
+            if self.teimosa == "1clique": self.teimosa = False; return
             if not self.teimosa: self.soltas.pop(x - 900)
             return
         rot = self.MENU[x - 100]
@@ -211,6 +212,9 @@ assert dm.empresa == "77" and dm.soltas == [] and dm.cl.count("fechar_solta") ==
 # janela que só aparece depois do aviso do Domínio: OK, fecha a Troca, fecha a janela e tenta de novo
 dm = Dominio(); dm.ocultas = 1; d.trocar_empresa(dm, "78")
 assert dm.empresa == "78" and "troca_fechar" in dm.cl and dm.cl.count("fechar_solta") == 1, dm.cl
+# janela que só fecha no 2º clique (o 1º só ativou)
+dm = Dominio(); dm.soltas = ["x"]; dm.teimosa = "1clique"; d.trocar_empresa(dm, "80")
+assert dm.empresa == "80" and dm.cl.count("fechar_solta") == 2, dm.cl
 # janela que não fecha: para sem responder nada
 dm = Dominio(); dm.soltas = ["x"]; dm.teimosa = True
 try:

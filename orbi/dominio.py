@@ -68,8 +68,13 @@ def fechar_janelas_abertas(t):
         x, y = botoes[0]
         nome = t.ler((max(0, x - 640), max(0, y - 9), 600, 18))
         t.log(f"  fechando janela aberta: {nome[:60] or '(sem título)'}")
+        fechou = lambda: len(t.botoes_fechar("area_janelas")) < len(botoes)  # noqa: E731
         t.clicar_em(x, y, espera=0.3)
-        if t.aguardar(lambda: len(t.botoes_fechar("area_janelas")) < len(botoes), 3, intervalo=0.3):
+        if t.aguardar(fechou, 3, intervalo=0.3):
+            continue
+        # o 1º clique às vezes só ativa a janela (Domínio remoto): tenta mais uma vez
+        t.clicar_em(x, y, espera=0.3)
+        if t.aguardar(fechou, 3, intervalo=0.3):
             continue
         aviso = t.ler("mensagem")
         raise Parar(f"A janela '{nome[:60]}' não fechou" + (f" (o Domínio perguntou: '{aviso[:120]}')" if aviso else "")
