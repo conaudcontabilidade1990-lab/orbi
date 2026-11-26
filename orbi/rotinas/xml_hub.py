@@ -177,9 +177,18 @@ class ImportarXml(SepararXml):
                     ops = xmls.opcoes_nfse(pasta_mes / tp, self._cnpj(codigo))
                     pular = tuple(n for n, chave in (("Serviço tomado", "tomado"), ("Serviço prestado", "prestado"))
                                   if chave not in ops)
-                res = imp.importar_tipo(t, tp, self._no_dominio(t, pasta_mes / tp), f"{mmaaaa}\\{tp}", simular, pular)
+                erros = set()
+                res = imp.importar_tipo(t, tp, self._no_dominio(t, pasta_mes / tp), f"{mmaaaa}\\{tp}", simular,
+                                        pular, erros)
                 if not simular:
-                    xmls.marcar_importados(pasta_mes, [tp])
+                    com_erro = xmls.separar_com_erro(pasta_mes, tp, erros) if erros else []
+                    if erros and len(com_erro) < len(erros):
+                        t.aviso(f"{tp}: documento(s) com erro sem XML correspondente: "
+                                f"{sorted(erros - {xmls.numero_da_chave(n) for n in com_erro})[:10]}")
+                    if com_erro:
+                        t.aviso(f"{len(com_erro)} XML de {tp} com erro copiados para {tp}\\{xmls.PASTA_ERRO} "
+                                "(ficam fora dos próximos zips até saírem dessa pasta)")
+                    xmls.marcar_importados(pasta_mes, [tp], excluir=com_erro)
                 feitos.append(f"{tp} ({cont[tp][1]}): " + " | ".join(res))
             partes.append(f"{m:02d}/{a}: " + "; ".join(feitos))
         return ("simulação — " if simular else "importado — ") + " / ".join(partes)

@@ -94,7 +94,7 @@ def separar(pasta_mes, gravar=True):
             res[tipo] = (len(arqs), len(arqs))
             continue
         destino = pasta_mes / tipo
-        ja = _nomes(destino / "importados.txt")
+        ja = _nomes(destino / "importados.txt") | com_erro(destino)
         pend = [a for a in arqs if a.name not in ja]
         res[tipo] = (len(arqs), len(pend))
         if not gravar:
@@ -113,14 +113,47 @@ def separar(pasta_mes, gravar=True):
     return res
 
 
-def marcar_importados(pasta_mes, tipos=TIPOS):
+PASTA_ERRO = "Com erro"
+
+
+def com_erro(pasta_tipo):
+    """Nomes dos XML separados por erro de importação (ficam fora do zip até saírem dessa pasta)."""
+    p = Path(pasta_tipo) / PASTA_ERRO
+    return {a.name for a in p.glob("*.xml")} if p.is_dir() else set()
+
+
+def numero_da_chave(nome_arquivo):
+    """Número do documento pela chave: 44 dígitos (posições 26-34) ou NFS-e nacional (24-36)."""
+    chave = re.sub(r"\D", "", Path(nome_arquivo).stem)
+    if len(chave) == 44:
+        return int(chave[25:34])
+    if len(chave) == 50:
+        return int(chave[23:36])
+    return None
+
+
+def separar_com_erro(pasta_mes, tipo, numeros):
+    """Copia para <tipo>\\Com erro os XML do zip pendente cujo número está em 'numeros'. Devolve os nomes."""
+    pasta_mes = Path(pasta_mes)
+    destino = pasta_mes / tipo
+    nomes = [n for n in _nomes(destino / "pendentes.txt") if numero_da_chave(n) in numeros]
+    if nomes:
+        import shutil
+        (destino / PASTA_ERRO).mkdir(exist_ok=True)
+        for n in nomes:
+            if (pasta_mes / n).exists():
+                shutil.copy2(pasta_mes / n, destino / PASTA_ERRO / n)
+    return nomes
+
+
+def marcar_importados(pasta_mes, tipos=TIPOS, excluir=()):
     """Depois de importar os zips no Domínio: o que estava no zip passa a 'importados' e o zip sai.
     Devolve {tipo: quantidade marcada}."""
     marcados = {}
     for tipo in tipos:
         destino = Path(pasta_mes) / tipo
-        pend = _nomes(destino / "pendentes.txt")
-        if not pend:
+        pend = _nomes(destino / "pendentes.txt") - set(excluir)
+        if not pend and not excluir:
             continue
         ja = _nomes(destino / "importados.txt")
         with open(destino / "importados.txt", "a", encoding="utf-8") as f:

@@ -102,5 +102,24 @@ with tempfile.TemporaryDirectory() as tmp:
     assert xmls.opcoes_nfse(pt, "05.466.705/0001-12") == {"tomado", "prestado"}
     assert xmls.opcoes_nfse(pt, "") == {"tomado", "prestado"}
 
+# erros de importação: separados em <tipo>\\Com erro e fora dos próximos zips
+with tempfile.TemporaryDirectory() as tmp:
+    mes = Path(tmp) / "112026"
+    mes.mkdir()
+    ch = lambda i: f"35" "2611" "00000000000191" "55" "002" f"{i:09d}" "1" f"{i:08d}" "0"  # noqa: E731
+    for i in (101, 102, 103):
+        (mes / f"{ch(i)}.xml").write_text("<nfeProc/>")
+    assert xmls.numero_da_chave(ch(102) + ".xml") == 102
+    nfse = "3547502" "2" "2" "09633382000165" "0000000044267" "2611" "110349021" "5"
+    assert xmls.numero_da_chave(nfse + ".xml") == 44267
+    xmls.separar(mes)
+    nomes = xmls.separar_com_erro(mes, "NF-e", {102})
+    assert nomes == [ch(102) + ".xml"] and (mes / "NF-e" / "Com erro" / nomes[0]).exists()
+    xmls.marcar_importados(mes, ["NF-e"], excluir=nomes)
+    assert sorted((mes / "NF-e" / "importados.txt").read_text().split()) == sorted(ch(i) + ".xml" for i in (101, 103))
+    assert xmls.separar(mes)["NF-e"] == (3, 0)                  # o com erro não volta para o zip
+    (mes / "NF-e" / "Com erro" / nomes[0]).unlink()              # usuário corrigiu e tirou da pasta
+    assert xmls.separar(mes)["NF-e"] == (3, 1)
+
 assert agenda.competencia_de("anterior_atual", dt.date(2026, 1, 5)) == ((2025, 12), (2026, 1))
 print("ok: XML separados e zipados por tipo")

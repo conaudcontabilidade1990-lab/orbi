@@ -57,4 +57,21 @@ for arq, xis_esp, opcoes in (
     assert any(p[0].startswith("import") for p in pal), pal
     pal = t.palavras((x + imp.DX_FECHAR - 50, y + imp.DY_FECHAR - 12, 100, 24))
     assert any(p[0].startswith("fech") for p in pal), pal
+# 3) Resumo dos Dados só com erros (NFS-e tomada lida como 'prestado'): abas, Gravar apagado e nº do documento
+atual["img"] = Image.open(F / "resumo_guia_erros.png").convert("RGB")
+rx, ry = imp._janela(t, "resumo")
+ax, ay, aw, ah = imp.RES_ABAS
+abas = (max(0, rx + ax), ry + ay, aw, ah)
+pal = t.palavras(abas)
+print("abas:", [(p[0], t.escuros_em(*imp._centro(p))) for p in pal])
+reg = next(p for p in pal if p[0].startswith("registro"))
+err = next(p for p in pal if p[0].startswith("erro"))
+assert t.escuros_em(*imp._centro(reg)) < 6 and t.escuros_em(*imp._centro(err)) >= 6
+gx, gy, gw, gh = imp.RES_GRADE
+linhas = [tx for tx, *_ in t.linhas((max(0, rx + gx), ry + gy, gw, gh))]
+print("grade:", linhas)
+assert imp.numeros_com_erro(linhas) == {44267}, linhas
+grav = next((p for p in t.palavras(imp._regiao_botoes(t, rx, ry)) if p[0].startswith("grav")), None)
+print("gravar:", grav, grav and t.escuros_em(*imp._centro(grav)))
+assert grav is None or t.escuros_em(*imp._centro(grav)) < 6
 print("ok: menu e telas de importação reconhecidos")

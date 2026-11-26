@@ -423,6 +423,11 @@ class Tela:
         img = ImageOps.grayscale(pyautogui.screenshot(region=(int(x) - 4, int(y) - 4, 9, 9)))
         return sum(1 for p in img.getdata() if p < 100)
 
+    def rolar(self, x, y, cliques):
+        self.checar()
+        pyautogui.scroll(cliques, x=int(x), y=int(y))
+        self.dormir(0.5)
+
     def apagar(self, n):
         """Backspace n vezes (limpa um campo de texto)."""
         self.checar()

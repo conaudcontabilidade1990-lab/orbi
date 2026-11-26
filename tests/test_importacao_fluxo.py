@@ -180,4 +180,6 @@ assert all("nada a gravar" in x for x in r) and dm.gravados == [] and not dm.res
 dm = Dom()
 r = imp.importar_tipo(dm, "CT-e", r"M:\x\112026\CT-e", "112026\\CT-e", simular=False, pular=("Notas canceladas",))
 assert dm.gravados == [409] and len(r) == 1, (dm.gravados, r)
+assert imp.numeros_com_erro(["44267 | 25/11/2026 | 42,00 | flyport comercio",
+                             "o registro de 'clientes' necessario esta invalido", "1385 l 07/11/2026 1.234,00"]) == {44267, 1385}
 print("ok: fluxo da importação de XML")

@@ -52,6 +52,16 @@ DX_PASTA, DY_PASTA = -135, 58
 # Resumo dos Dados (a partir do [X] dele): faixa das abas e área dos botões de baixo
 RES_ABAS = (-790, 52, 770, 32)
 RES_BOTOES = (-810, 200, 805, 560)
+RES_GRADE = (-760, 65, 740, 310)
+
+
+def numeros_com_erro(linhas):
+    """Números de documento da guia Erros: o número vem antes da data (ex.: '44267 | 25/11/2026')."""
+    nums = set()
+    for tx in linhas:
+        for m in re.finditer(r"(\d{1,15})\D{0,4}(\d{2}/\d{2}/\d{4})", tx):
+            nums.add(int(m.group(1)))
+    return nums
 
 
 def _so(n):
@@ -214,10 +224,30 @@ def _regiao_botoes(t, rx, ry):
     return (x0, y0, min(bw, W - x0), min(bh, H - 40 - y0))
 
 
-def importar_e_gravar(t, xis, simular, log):
+def _ler_erros(t, rx, ry, aba):
+    """Abre a guia Erros, expande tudo e lê os números dos documentos (rolando a lista)."""
+    t.clicar_em(*_centro(aba), espera=0.8)
+    exp = _palavra(t, _regiao_botoes(t, rx, ry), lambda w: w.startswith("expandir"))
+    if exp:
+        t.clicar_em(*_centro(exp), espera=0.8)
+    gx, gy, gw, gh = RES_GRADE
+    grade = (max(0, rx + gx), ry + gy, gw, gh)
+    nums, iguais = set(), 0
+    for _ in range(30):
+        novos = numeros_com_erro([tx for tx, *_ in t.linhas(grade)]) - nums
+        nums |= novos
+        iguais = 0 if novos else iguais + 1
+        if iguais >= 2:
+            break
+        t.rolar(grade[0] + gw // 2, grade[1] + gh // 2, -5)
+    return nums
+
+
+def importar_e_gravar(t, xis, simular, log, numeros_erro=None):
     """Clica em Importar, espera o Resumo dos Dados, marca Todos nas advertências e grava.
     Devolve o texto do Domínio ('Dados gravados com sucesso' com as quantidades) ou 'nada a importar'."""
     x, y = xis
+    numeros_erro = set() if numeros_erro is None else numeros_erro
     t.clicar_em(x + DX_IMPORTAR, y + DY_IMPORTAR, espera=1.0)
     limite = t.T.get("importacao", 1800)
 
@@ -256,7 +286,8 @@ def importar_e_gravar(t, xis, simular, log):
             t.aviso("advertências: não achei o botão Todos")
     erros = _palavra(t, abas, lambda w: w.startswith("erro"))
     if erros and t.escuros_em(*_centro(erros)) >= 6:
-        t.aviso("a importação teve ERROS (esses registros não são gravados) — confira no Domínio")
+        numeros_erro.update(_ler_erros(t, rx, ry, erros))
+        t.aviso(f"a importação teve ERROS ({len(numeros_erro)} documento(s)); esses não são gravados")
 
     botoes = t.palavras(_regiao_botoes(t, rx, ry))
     cancelar = next((p for p in botoes if p[0].startswith("cancel")), None)
@@ -327,8 +358,9 @@ def fechar_tela(t, xis):
     d.fechar_janelas_abertas(t)
 
 
-def importar_tipo(t, tipo, pasta_dominio, esperado, simular, pular=()):
-    """Importa o zip de um tipo (as opções dele, menos as de 'pular'). Devolve os resultados por opção."""
+def importar_tipo(t, tipo, pasta_dominio, esperado, simular, pular=(), numeros_erro=None):
+    """Importa o zip de um tipo (as opções dele, menos as de 'pular'). Devolve os resultados por opção.
+    Os números dos documentos com erro vão para 'numeros_erro' (set)."""
     xis = abrir_tela(t, tipo)
     escolher_pasta(t, xis, pasta_dominio, esperado)
     resultados = []
@@ -337,7 +369,7 @@ def importar_tipo(t, tipo, pasta_dominio, esperado, simular, pular=()):
             t.log(f"    {tipo} · {nome}: pulado (nenhuma nota desse tipo no zip)")
             continue
         marcar_opcao(t, xis, nome, aceita)
-        r = importar_e_gravar(t, xis, simular, t.log)
+        r = importar_e_gravar(t, xis, simular, t.log, numeros_erro)
         t.log(f"    {tipo} · {nome}: {r}")
         resultados.append(f"{nome}: {r}")
     fechar_tela(t, xis)
