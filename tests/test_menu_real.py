@@ -19,7 +19,11 @@ t = tela.Tela(config.carregar(), print)
 ESPERADO = {"entradas": (1058, 464), "saidas": (1053, 486), "servicos": (1057, 508)}
 for rotina, (ex, ey) in ESPERADO.items():
     cliques.clear()
-    dominio.navegar_menu_parcelas(t, rotina)
+    try:
+        dominio.navegar_menu_parcelas(t, rotina)
+    except tela.Parar:
+        print("linhas lidas:", [l[0] for l in tela.ocr_linhas(TELA.crop((940, 0, 1366, 728)), "pt-BR")])
+        raise
     print(rotina, cliques)
     (px, py), (gx, gy), (fx, fy) = cliques
     assert 560 <= px <= 610 and 450 <= py <= 468, ("Parcelas", px, py)          # não 'Alterar Cadastro' (437)

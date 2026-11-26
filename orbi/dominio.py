@@ -140,11 +140,24 @@ def _so_letras(n):
 
 # Itens de menu reconhecidos pelo TEXTO (o menu Utilitários muda de empresa para empresa;
 # clicar por posição já abriu a janela errada). O OCR às vezes troca "ç" por "g".
-ITEM_FINAL = {
-    "entradas": lambda n: _so_letras(n) in ("entradas", "entrada"),
-    "saidas": lambda n: _so_letras(n) in ("saidas", "saida"),
-    "servicos": lambda n: _so_letras(n) in ("servicos", "servigos", "servios", "servicos"),
-}
+_ITENS_SUBMENU = ("entradas", "saidas", "servicos", "cupons fiscais", "cupons fiscais eletronicos cfe")
+
+
+def _item_parecido(alvo):
+    """Aceita o texto lido se ele se parece mais com 'alvo' do que com qualquer outro item do
+    submenu (o OCR às vezes lê 'Serviços' como 'Servigos', 'Sewiços' etc.)."""
+    import difflib
+
+    def aceita(n):
+        lido = _so_letras(n)
+        if not lido:
+            return False
+        notas = {i: difflib.SequenceMatcher(None, lido, i).ratio() for i in _ITENS_SUBMENU}
+        return max(notas, key=notas.get) == alvo and notas[alvo] >= 0.7
+    return aceita
+
+
+ITEM_FINAL = {k: _item_parecido(k) for k in ("entradas", "saidas", "servicos")}
 
 
 def _menu(t, aceita, regiao, nome):
