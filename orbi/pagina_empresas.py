@@ -90,10 +90,14 @@ class PaginaEmpresas:
 
         acoes = ctk.CTkFrame(esq, fg_color="transparent")
         acoes.pack(fill="x", padx=14, pady=(4, 6))
+        self.bt_usar = ctk.CTkButton(acoes, text="Usar marcadas  ▶", height=30, width=130, corner_radius=8,
+                                     font=F(11, "bold"), fg_color=COR["azul"], hover_color=COR["azul_hover"],
+                                     command=self.usar_marcadas)
+        self.bt_usar.pack(side="right", padx=(6, 0))
         ctk.CTkButton(acoes, text="Limpar filtros", height=30, width=110, corner_radius=8, font=F(11),
                       fg_color="transparent", border_width=1, border_color=COR["borda"], text_color=COR["texto"],
                       hover_color=COR["trilho"], command=self.limpar).pack(side="right")
-        ctk.CTkButton(acoes, text="Tirar marcadas", height=30, width=118, corner_radius=8, font=F(11),
+        ctk.CTkButton(acoes, text="Tirar do filtro", height=30, width=110, corner_radius=8, font=F(11),
                       fg_color="transparent", border_width=1, border_color=COR["borda"], text_color=COR["texto"],
                       hover_color=COR["trilho"], command=self._excluir_marcadas).pack(side="right", padx=6)
         self.lbl_conta = ctk.CTkLabel(acoes, text="", font=F(12, "bold"), text_color=COR["texto"], anchor="w")
@@ -192,6 +196,18 @@ class PaginaEmpresas:
                 e["uf"], e["cidade"], e["responsavel"], "ativa" if e["ativa"] else "inativa"])
         sem = sum(1 for e in lista if not e["codigo"])
         self.lbl_conta.configure(text=f"{len(lista)} empresa(s)" + (f" · {sem} sem código do Domínio" if sem else ""))
+
+    def usar_marcadas(self):
+        """Leva só as empresas marcadas (Ctrl/Shift + clique) para a Executar, como códigos."""
+        ids = set(self.tabela.selection())
+        marcadas = [e for e in self.app.empresas if e["id"] in ids]
+        cods = [e["codigo"] for e in marcadas if e["codigo"]]
+        if not cods:
+            messagebox.showinfo("Orbi", "Marque na tabela as empresas que quer usar (Ctrl + clique para várias, "
+                                        "Shift + clique para um intervalo) e clique em \"Usar marcadas\".")
+            return
+        sem = len(marcadas) - len(cods)
+        self.app.usar_codigos(cods, aviso=f"{sem} marcada(s) sem código do Domínio ficaram de fora." if sem else "")
 
     def _excluir_marcadas(self):
         ids = set(self.tabela.selection())

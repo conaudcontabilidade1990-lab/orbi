@@ -131,6 +131,11 @@ assert len(a.pag_emp.tabela.get_children()) == 3, a.pag_emp.tabela.get_children(
 a.pag_emp._mudou("regime", "Simples Nacional"); esperar(root, 0.3)
 assert len(a.pag_emp.tabela.get_children()) == 2
 foto(root, "5_empresas_claro")
+# marcar uma empresa e "Usar marcadas": vai para Executar só com ela
+a.pag_emp.tabela.selection_set("a"); a.pag_emp.usar_marcadas(); esperar(root, 0.6)
+assert a.pagina_atual == "executar" and a.var_fonte.get() == "Códigos"
+assert a._empresas_escolhidas() == [("611", "EMPRESA EXEMPLO UM LTDA")], a._empresas_escolhidas()
+a.mostrar("empresas"); esperar(root, 0.4)
 a.mostrar("executar"); esperar(root, 0.5)
 a.var_fonte.set("Seleção salva"); a._mostrar_fonte(); a.var_sel.set("Simples Nacional"); a._resumo_empresas()
 esperar(root, 0.3)

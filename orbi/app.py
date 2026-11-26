@@ -564,6 +564,17 @@ class App:
                 self.fila.put(("selecoes", ([], msg)))
         self._em_thread(trabalho)
 
+    def usar_codigos(self, cods, aviso=""):
+        """Vai para Executar com estes códigos (modo Códigos)."""
+        self.mostrar("executar")
+        if not hasattr(self, "txt_emp"):
+            return
+        self.var_fonte.set("Códigos")
+        self.txt_emp.delete("1.0", "end")
+        self.txt_emp.insert("1.0", " ".join(cods))
+        self._mostrar_fonte()
+        self.lbl_status.configure(text=f"{len(cods)} empresa(s) marcada(s) levadas para Executar. {aviso}".strip())
+
     def _empresas_chegaram(self, emp, quando):
         self.empresas, self.empresas_quando = emp, quando
         if hasattr(self, "lbl_status") and self.lbl_status.winfo_exists():
@@ -796,9 +807,19 @@ class App:
         origem = (f"seleção \"{self.var_sel.get()}\"" if self.var_fonte.get() == "Seleção salva" else "códigos digitados")
         comp_txt = (f"\nCompetência: {competencia[0][1]:02d}/{competencia[0][0]} a {competencia[1][1]:02d}/{competencia[1][0]}"
                     if competencia else "")
-        if not simular and not messagebox.askyesno(
-                "Orbi", f"{rot.nome}\n{len(empresas)} empresa(s) ({origem}), GERAÇÃO REAL.{comp_txt}\n\nIniciar?"):
-            return
+        if not simular:
+            amostra = "\n".join(f"  {c} {self.nomes_exec.get(c, '')[:40]}" for c in empresas[:8])
+            mais = f"\n  … e mais {len(empresas) - 8}" if len(empresas) > 8 else ""
+            if not messagebox.askyesno(
+                    "Orbi — GERAÇÃO REAL",
+                    f"{rot.nome}\nEmpresas ({origem}): {len(empresas)}\n\n{amostra}{mais}{comp_txt}\n\nIniciar a GERAÇÃO REAL?",
+                    icon="warning"):
+                return
+            if len(empresas) > 20 and not messagebox.askyesno(
+                    "Orbi — confirme de novo",
+                    f"São {len(empresas)} empresas em GERAÇÃO REAL.\n\nTem certeza de que são todas estas?",
+                    icon="warning", default="no"):
+                return
         rot.competencia = competencia
 
         self.cfg["ultima_rotina"] = rot.id
