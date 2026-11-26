@@ -39,6 +39,9 @@ jobs:
       - name: Teste da leitura de números
         run: python tests/test_numeros.py
 
+      - name: Teste dos fluxos das rotinas (Domínio simulado)
+        run: python tests/test_fluxo.py
+
       - name: Teste da janela (login, departamentos, tema, borda) + prints
         run: python tests/test_app.py
 

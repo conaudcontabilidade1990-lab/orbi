@@ -34,3 +34,11 @@ faixa = faixa_destacada(troca.crop((x, y, x + w, y + h)), config.PADRAO["pontos"
 assert faixa is not None and 18 <= faixa[0] <= 21 and 35 <= faixa[1] <= 38, faixa  # y 309-326 na tela
 assert faixa_destacada(Image.new("RGB", (40, 100), "white"), 5) is None
 print("ok: linha destacada encontrada", faixa)
+
+# diálogo de Entradas com 25 dias (tela real; só a caixa do diálogo)
+dlg25 = Image.open(Path(__file__).parent / "fixtures" / "dialogo_gerar_entradas_25.png")
+for nome, esperado in (("campo_parcelas", "1"), ("campo_dias", "25")):
+    x, y, w, h = R[nome]
+    lido = numero_de_imagem(dlg25.crop((x, y, x + w, y + h)))
+    assert lido == esperado, (nome, lido)
+print("ok: 1 parcela e 25 dias lidos")

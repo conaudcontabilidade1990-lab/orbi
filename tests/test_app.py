@@ -109,6 +109,36 @@ a.borda.esconder()
 root.deiconify()
 root.destroy()
 
+# botão Iniciar pelo caminho real (Domínio simulado) + navegação Painel -> Executar
+from orbi import tela as telamod  # noqa: E402
+from orbi.rotinas import ROTINAS  # noqa: E402
+telamod.Tela.dormir = lambda self, s: None
+telamod.Tela.conferir_resolucao = lambda self: None
+for r in ROTINAS:
+    r.executar_empresa = lambda t, c, s: "sem notas sem parcelas"
+ctk.set_appearance_mode("dark")
+root, a = abrir()
+a.fila.put(("login_ok", (conta.Usuario("u4", "leo@conaud", "Leonardo", "admin", None), True)))
+esperar(root, 1.0)
+a.mostrar("painel"); esperar(root, 0.5)
+a.mostrar("executar"); esperar(root, 0.5)
+assert a.pagina_atual == "executar" and a.paginas["executar"].winfo_ismapped(), "Executar não voltou a aparecer"
+assert "Gerar parcelas — Entradas" in a.om_rot.cget("values"), a.om_rot.cget("values")
+a.txt_emp.delete("1.0", "end"); a.txt_emp.insert("1.0", "611 665")
+a.var_simular.set(True)
+a.bt_iniciar.invoke()
+fim = time.time() + 15
+while time.time() < fim and (a.rodando or time.time() < fim - 13):
+    root.update(); time.sleep(0.03)
+esperar(root, 0.8)
+log = a.txt_log.get("1.0", "end")
+print(log[-400:])
+assert "RELATÓRIO" in log and "665: sem notas sem parcelas" in log, "a rotina não rodou pelo botão Iniciar"
+assert a.cont_exec["sucesso"].cget("text") == "2", a.cont_exec["sucesso"].cget("text")
+assert not a.rodando and str(a.bt_iniciar.cget("state")) == "normal"
+foto(root, "4_executado_escuro")
+root.destroy()
+
 # 'lembrar de mim' (DPAPI)
 sessao.guardar("x@conaud", "token-de-teste")
 assert sessao.carregar() == ("x@conaud", "token-de-teste")

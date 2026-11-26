@@ -28,3 +28,14 @@ achou = [(t, int(lx), int(ly)) for t, lx, ly, lw, lh in ocr_linhas(troca) if "tr
 print("título:", achou)
 assert achou and 440 <= achou[0][1] <= 470 and 132 <= achou[0][2] <= 150, achou
 print("ok: OCR em telas do Domínio")
+
+# Busca avançada (Entradas): título e linha do filtro "Acumulador | Igual a"
+ba = Image.open(Path(__file__).parent / "fixtures" / "busca_avancada.png")
+x, y, w, h = R["ba_titulo"]
+titulo = norm(ocr_imagem(ba.crop((x, y, x + w, y + h))))
+x, y, w, h = R["ba_linha"]
+filtro = norm(ocr_imagem(ba.crop((x, y, x + w, y + h))))
+print("busca avançada:", titulo, "|", filtro)
+assert "busca avancada" in titulo, titulo
+assert "acumulador" in filtro and "iguala" in filtro.replace(" ", ""), filtro
+print("ok: Busca avançada lida")

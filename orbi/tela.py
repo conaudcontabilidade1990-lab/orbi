@@ -135,6 +135,8 @@ def faixa_destacada(img, x):
 # Os campos numéricos do Domínio usam sempre a mesma fonte pequena; o OCR não lê um dígito
 # sozinho, então comparamos o desenho dos pixels. Dígito desconhecido = "?" (a rotina para).
 GLIFOS = {
+    "2": (".###.", "#...#", "....#", "....#", "...#.", "..#..", ".#...", "#....", "#####"),
+    "5": ("#####", "#....", "#....", "####.", "#...#", "....#", "....#", "#...#", ".###."),
     "1": ("..#",
           "###",
           "..#",

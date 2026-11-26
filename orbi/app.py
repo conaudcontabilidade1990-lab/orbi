@@ -62,7 +62,7 @@ class App:
         self.borda = Borda(root)
 
         ctk.set_appearance_mode({"escuro": "dark", "claro": "light"}.get(self.cfg.get("tema"), "light"))
-        root.title(f"Orbi {VERSAO}")
+        root.title(f"Orbi — Robô da Conaud Contabilidade · v{VERSAO}")
         W, H = root.winfo_screenwidth(), root.winfo_screenheight()
         larg, alt = min(1100, W - 40), min(700, H - 80)
         root.geometry(f"{larg}x{alt}+{max(0, (W - larg) // 2)}+{max(0, (H - alt) // 2 - 20)}")
@@ -79,6 +79,7 @@ class App:
             self.log(f"Aviso: config.json com erro, usando padrão ({self.cfg['_erro_config']}).")
         atualizacao.limpar_antigo()
         threading.Thread(target=self._checar_atualizacao, daemon=True).start()
+        root.report_callback_exception = self._erro_interface
         root.after(60, self._drenar)
         root.protocol("WM_DELETE_WINDOW", self._fechar)
 
@@ -92,9 +93,21 @@ class App:
 
     # ------------------------------ utilidades ------------------------------
     def _icone(self):
+        """Ícone nítido na barra de tarefas: .ico com todos os tamanhos e iconphoto em alta
+        resolução (o Windows escolhe o tamanho certo em vez de ampliar o de 16 px)."""
+        from PIL import ImageTk
         ico = recurso("orbi.ico")
-        if ico.exists():
-            self.root.after(250, lambda: self.root.iconbitmap(str(ico)))
+        base = Image.open(recurso("orbi/recursos/logo.png"))
+        self._fotos_icone = [ImageTk.PhotoImage(base.resize((s, s), Image.LANCZOS)) for s in (256, 128, 64, 48, 32, 16)]
+
+        def aplicar():
+            try:
+                if ico.exists():
+                    self.root.iconbitmap(str(ico))
+                self.root.iconphoto(True, *self._fotos_icone)
+            except tk.TclError:
+                pass
+        self.root.after(260, aplicar)
 
     @property
     def escuro(self):
@@ -121,6 +134,17 @@ class App:
     def log(self, msg, alvo="log"):
         self.fila.put((alvo, f"{dt.datetime.now():%H:%M:%S}  {msg}"))
 
+    def _erro_interface(self, tipo, valor, tb):
+        """Erro num clique/botão: registra no log e avisa (antes ficava escondido)."""
+        import traceback
+        texto = "".join(traceback.format_exception(tipo, valor, tb))
+        self._escrever("log", f"{dt.datetime.now():%H:%M:%S}  !! Erro na janela: {tipo.__name__}: {valor}\n{texto}")
+        try:
+            messagebox.showerror("Orbi", f"Ocorreu um erro e a ação não foi concluída:\n\n{tipo.__name__}: {valor}\n\n"
+                                         "Os detalhes ficaram no registro (pasta de logs).")
+        except tk.TclError:
+            pass
+
     # ------------------------------ login ------------------------------
     def _tela_login(self, entrando=None):
         self._limpar()
@@ -131,8 +155,10 @@ class App:
         dentro.pack(padx=46, pady=36)
         ctk.CTkLabel(dentro, text="", image=self.logo_grande).pack()
         ctk.CTkLabel(dentro, text="Orbi", font=fonte(30, "bold"), text_color=COR["texto"]).pack(pady=(10, 0))
-        ctk.CTkLabel(dentro, text="Entre com a sua conta do Portal Conaud", font=fonte(13),
-                     text_color=COR["suave"]).pack(pady=(0, 18))
+        ctk.CTkLabel(dentro, text="Robô da Conaud Contabilidade", font=fonte(13, "bold"),
+                     text_color=COR["azul"]).pack()
+        ctk.CTkLabel(dentro, text="Entre com a sua conta do Portal Conaud", font=fonte(12),
+                     text_color=COR["suave"]).pack(pady=(2, 18))
 
         self.var_email = tk.StringVar(value=entrando or self.cfg.get("ultimo_email", ""))
         self.var_senha = tk.StringVar()
@@ -229,7 +255,7 @@ class App:
         nome = ctk.CTkFrame(topo, fg_color="transparent")
         nome.pack(side="left", padx=10)
         ctk.CTkLabel(nome, text="Orbi", font=fonte(22, "bold"), text_color=COR["texto"]).pack(anchor="w")
-        ctk.CTkLabel(nome, text=f"Robô do Domínio\nversão {VERSAO}", font=fonte(11),
+        ctk.CTkLabel(nome, text=f"Robô da Conaud\nContabilidade · v{VERSAO}", font=fonte(11),
                      text_color=COR["suave"], justify="left").pack(anchor="w")
 
         self.nav = {}
@@ -520,21 +546,24 @@ class App:
                 alvo, msg = self.fila.get_nowait()
             except queue.Empty:
                 break
-            if alvo == "login_ok":
-                self._login_ok(*msg)
-            elif alvo == "login_erro":
-                self._login_erro(msg)
-            elif alvo == "status":
-                if hasattr(self, "lbl_status") and self.lbl_status.winfo_exists():
-                    self.lbl_status.configure(text=msg)
-            elif alvo == "progresso":
-                self._progresso(*msg)
-            elif alvo == "resultado":
-                self._contar_resultado(msg)
-            elif alvo == "fim":
-                self._fim()
-            else:
-                self._escrever(alvo, msg)
+            try:
+                if alvo == "login_ok":
+                    self._login_ok(*msg)
+                elif alvo == "login_erro":
+                    self._login_erro(msg)
+                elif alvo == "status":
+                    if hasattr(self, "lbl_status") and self.lbl_status.winfo_exists():
+                        self.lbl_status.configure(text=msg)
+                elif alvo == "progresso":
+                    self._progresso(*msg)
+                elif alvo == "resultado":
+                    self._contar_resultado(msg)
+                elif alvo == "fim":
+                    self._fim()
+                else:
+                    self._escrever(alvo, msg)
+            except Exception:
+                self._erro_interface(*sys.exc_info())
         self.root.after(60, self._drenar)
 
     def _escrever(self, alvo, msg):
@@ -603,13 +632,28 @@ class App:
         self.anel.definir(0, "0%", f"0 de {len(empresas)}")
         self.bt_iniciar.configure(state="disabled")
         self.bt_parar.configure(state="normal")
-        self.borda.mostrar(self.parar.set)
-        self.borda.progresso(0, len(empresas), f"{rot.nome} · começando…")
-        self._em_thread(lambda: self._executar(rot, empresas, simular))
+        try:
+            self.borda.mostrar(self.parar.set)
+            self.borda.progresso(0, len(empresas), f"{rot.nome} · começando…")
+        except Exception as e:
+            self.log(f"(borda azul indisponível: {e})")
+        self._em_thread(lambda: self._executar_seguro(rot, empresas, simular))
+
+    def _executar_seguro(self, rot, empresas, simular):
+        try:
+            self._executar(rot, empresas, simular)
+        except Exception as e:
+            import traceback
+            self.log(f"!! Erro inesperado: {type(e).__name__}: {e}")
+            self.log(traceback.format_exc())
+            self.fila.put(("fim", ""))
 
     def _progresso(self, i, n, codigo):
         self.anel.definir((i - 1) / n, f"{round(100 * (i - 1) / n)}%", f"empresa {codigo} · {i} de {n}")
-        self.borda.progresso(i - 1, n, f"Empresa {codigo} · {i} de {n}")
+        try:
+            self.borda.progresso(i - 1, n, f"Empresa {codigo} · {i} de {n}")
+        except Exception:
+            pass
         self.lbl_status.configure(text=f"Empresa {codigo} ({i}/{n})")
 
     def _contar_resultado(self, dados):
@@ -621,7 +665,10 @@ class App:
         n = self.total_exec
         self.anel.definir(self.feitos_exec / n, f"{round(100 * self.feitos_exec / n)}%",
                           f"{self.feitos_exec} de {n}")
-        self.borda.progresso(self.feitos_exec, n, f"Empresa {codigo}: {STATUS_ROTULO[status].lower()}")
+        try:
+            self.borda.progresso(self.feitos_exec, n, f"Empresa {codigo}: {STATUS_ROTULO[status].lower()}")
+        except Exception:
+            pass
 
     def _executar(self, rot, empresas, simular):
         t = Tela(self.cfg, self.log, self.parar)
@@ -685,7 +732,10 @@ class App:
 
     def _fim(self):
         self.rodando = False
-        self.borda.esconder()
+        try:
+            self.borda.esconder()
+        except Exception:
+            pass
         try:
             self.bt_iniciar.configure(state="normal")
             self.bt_parar.configure(state="disabled")

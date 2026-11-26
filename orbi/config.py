@@ -12,7 +12,7 @@ PASTA = Path(os.environ.get("APPDATA", Path.home())) / "Orbi"
 PASTA_LOGS = PASTA / "logs"
 ARQUIVO = PASTA / "config.json"
 
-ESQUEMA = 6  # sobe quando pontos/regiões padrão mudam; ajustes antigos são descartados
+ESQUEMA = 7  # sobe quando pontos/regiões padrão mudam; ajustes antigos são descartados
 
 PADRAO = {
     "resolucao": [1366, 768],
@@ -41,6 +41,8 @@ PADRAO = {
         "radio_todas": [333, 254], "radio_somente": [333, 274],
         "venc_dropdown": [583, 354], "venc_informar": [500, 379], "campo_dias": [488, 378],
         "dlg_gerar": [1014, 244], "dlg_cancelar": [1014, 278],
+        # Busca avançada (Entradas)
+        "ba_coluna": [445, 356], "ba_valor": [705, 356], "ba_ok": [945, 428], "ba_cancelar": [945, 463],
         "btn_sim": [752, 440], "btn_ok_sucesso": [758, 440], "btn_ok_vazio": [830, 440],
     },
     # Regiões de leitura (x, y, largura, altura). null = ainda não calibrada.
@@ -55,6 +57,8 @@ PADRAO = {
         "campo_vencimento": [468, 346, 110, 17],
         "campo_dias": [469, 371, 42, 14],
         "botao_buscar": [1262, 679, 100, 20],
+        "ba_titulo": [372, 281, 250, 16],        # "Busca avançada"
+        "ba_linha": [394, 347, 474, 18],         # Coluna | Condição | Valor da 1ª linha do filtro
     },
     # Preferências da tela
     "ultima_rotina": "",
