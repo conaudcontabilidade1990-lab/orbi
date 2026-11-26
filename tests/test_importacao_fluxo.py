@@ -89,7 +89,7 @@ class Dom:
         if regiao == "sel_campo":
             return self.campo
         if regiao == "sel_linha1":
-            return "ct-e.zip" if self.listou else ""
+            return "35261100000000000191570010000000011000000010.xml" if self.listou else ""
         if regiao == "sel_linha2":
             return ""
         if regiao == "dlg_importacao":

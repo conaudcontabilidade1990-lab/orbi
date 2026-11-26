@@ -151,8 +151,8 @@ def escolher_pasta(t, xis, pasta_dominio, esperado):
             t.digitar(pasta_dominio, espera=0.5)   # digitado tecla a tecla (não depende da área de transferência)
         else:
             t.colar(pasta_dominio, espera=1.5)
-        lido = _so(t.ler("sel_campo")).replace(" ", "")
-        if alvo in lido:
+        # o Domínio remoto demora a redesenhar o campo: espera o texto aparecer
+        if t.aguardar(lambda: alvo in _so(t.ler("sel_campo")).replace(" ", ""), 5, intervalo=0.5):
             break
     else:
         t.clicar("sel_cancelar", espera=0.5)
@@ -163,17 +163,15 @@ def escolher_pasta(t, xis, pasta_dominio, esperado):
         msg = _dialogo(t)
         if "nao e valido" in msg or "nao existem" in msg:
             return "erro:" + msg
-        return "ok" if "zip" in t.ler("sel_linha1") else ""
+        linha = t.ler("sel_linha1")          # o Domínio mostra os XML de dentro do zip
+        return "ok" if (".xml" in linha or "zip" in linha or "xml" in linha) else ""
     r = t.aguardar(estado, 20, intervalo=0.5)
     if r != "ok":
         if r:
             t.teclas("enter")
             t.dormir(0.5)
         t.clicar("sel_cancelar", espera=0.5)
-        raise Parar(f"A pasta não listou o arquivo .zip ({(r or 'nada apareceu')[:150]}).")
-    if t.ler("sel_linha2").strip():
-        t.clicar("sel_cancelar", espera=0.5)
-        raise Parar("A pasta tem mais de um arquivo; esperava só o .zip. Não importei nada.")
+        raise Parar(f"A Seleção de arquivos não listou os XML do zip ({(r or 'nada apareceu')[:150]}).")
     t.clicar("sel_todos", espera=0.4)
     t.clicar("sel_ok", espera=0.8)
     if not t.aguardar(lambda: "selecao de arquivos" not in t.ler("sel_titulo"), 5, intervalo=0.4):
