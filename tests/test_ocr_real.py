@@ -58,9 +58,7 @@ def cel(nome, **k):
 
 
 col, cond = cel("ba_coluna_cel", fator=4, borda=8), cel("ba_condicao_cel", fator=4, borda=8)
-val = cel("ba_valor_cel", fator=4, binarizar=True, borda=12)
-print("células:", col, "|", cond, "|", val)
+print("células:", col, "|", cond)
 assert "cumulador" in col, col
 assert "igual" in cond.replace(" ", ""), cond
-assert val.strip() in ("0", "o"), val
 print("ok: células da Busca avançada")

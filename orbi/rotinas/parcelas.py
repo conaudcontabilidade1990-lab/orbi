@@ -180,11 +180,12 @@ class GerarParcelasEntradas(GerarParcelas):
         """Confere célula por célula (ler a linha inteira cortava a 1ª e a última letra)."""
         coluna = t.ler("ba_coluna_cel", fator=4, borda=8)
         condicao = t.ler("ba_condicao_cel", fator=4, borda=8).replace(" ", "")
-        valor = ""
-        for fator in (4, 6):
-            valor = re.sub(r"\D", "", t.ler("ba_valor_cel", fator=fator, binarizar=True, borda=12))
-            if valor == self.ACUMULADOR:
-                break
+        valor = t.ler_numero("ba_valor_cel")       # pelo desenho dos dígitos (exato)
+        if valor != self.ACUMULADOR:                # reserva: OCR em preto e branco
+            for fator in (4, 6):
+                valor = re.sub(r"\D", "", t.ler("ba_valor_cel", fator=fator, binarizar=True, borda=12))
+                if valor == self.ACUMULADOR:
+                    break
         ok_col = "cumulador" in coluna or "acumul" in coluna
         ok_cond = "igual" in condicao
         return ok_col, ok_cond, valor, f"coluna '{coluna}', condição '{condicao}', valor '{valor}'"

@@ -42,3 +42,16 @@ for nome, esperado in (("campo_parcelas", "1"), ("campo_dias", "25")):
     lido = numero_de_imagem(dlg25.crop((x, y, x + w, y + h)))
     assert lido == esperado, (nome, lido)
 print("ok: 1 parcela e 25 dias lidos")
+
+# valor da Busca avançada pelo desenho dos dígitos ("0" na tela real) e a tabela completa 0-9
+ba = Image.open(Path(__file__).parent / "fixtures" / "busca_avancada.png")
+x, y, w, h = R["ba_valor_cel"]
+assert numero_de_imagem(ba.crop((x, y, x + w, y + h))) == "0", numero_de_imagem(ba.crop((x, y, x + w, y + h)))
+from orbi.tela import GLIFOS  # noqa: E402
+assert sorted(GLIFOS) == list("0123456789")
+# códigos da lista da Troca de empresas (mesma fonte): 662, 667, 674, 708
+tr = Image.open(Path(__file__).parent / "fixtures" / "troca_empresas_665.png")
+for i, cod in ((0, "662"), (2, "667"), (6, "674"), (19, "708")):
+    y0 = 289 + i * 19
+    assert numero_de_imagem(tr.crop((470, y0 + 2, 548, y0 + 17))) == cod, (cod, numero_de_imagem(tr.crop((470, y0 + 2, 548, y0 + 17))))
+print("ok: valor da Busca avançada e dígitos 0-9")

@@ -75,6 +75,7 @@ class Dominio:
     def achar_texto(self, *a): return None
     def ler_numero(self, r):
         if r == "campo_parcelas": return "1"
+        if r == "ba_valor_cel": return "2554"
         return self.dias_lidos or self.dias
     def ler(self, r, digitos=False, **k):
         return {"empresa_ativa": "nome da empresa", "empresa_codigo": f"- {self.empresa}",
