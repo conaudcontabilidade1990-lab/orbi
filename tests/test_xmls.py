@@ -91,5 +91,16 @@ with tempfile.TemporaryDirectory() as tmp:
     manter, pulos = im.checagem(["494"])
     assert manter == [] and pulos == {"494": "nada novo para importar"}, (manter, pulos)
 
+with tempfile.TemporaryDirectory() as tmp:
+    pt = Path(tmp)
+    tom = "3547502" "2" "2" "09633382000165" + "0" * 13 + "2611" + "1" * 9 + "5"
+    pre = "3547502" "2" "2" "05466705000112" + "0" * 13 + "2611" + "1" * 9 + "5"
+    assert len(tom) == 50 and xmls.prestador_nfse(pre + ".xml") == "05466705000112"
+    (pt / "pendentes.txt").write_text(tom + ".xml\n")
+    assert xmls.opcoes_nfse(pt, "05.466.705/0001-12") == {"tomado"}
+    (pt / "pendentes.txt").write_text(tom + ".xml\n" + pre + ".xml\n")
+    assert xmls.opcoes_nfse(pt, "05.466.705/0001-12") == {"tomado", "prestado"}
+    assert xmls.opcoes_nfse(pt, "") == {"tomado", "prestado"}
+
 assert agenda.competencia_de("anterior_atual", dt.date(2026, 1, 5)) == ((2025, 12), (2026, 1))
 print("ok: XML separados e zipados por tipo")

@@ -119,6 +119,16 @@ class ImportarXml(SepararXml):
                 pulos[cod] = "nada novo para importar"
         return manter, pulos
 
+    @staticmethod
+    def _cnpj(codigo):
+        """CNPJ da empresa pelo cadastro do portal (cópia local)."""
+        try:
+            from .. import portal
+            empresas, _ = portal.empresas_guardadas()
+            return next((e.get("cnpj", "") for e in empresas if str(e.get("codigo")) == str(codigo)), "")
+        except Exception:
+            return ""
+
     def _no_dominio(self, t, caminho):
         """C:\\... deste computador -> unidade que o Domínio enxerga (padrão M:)."""
         p = str(caminho)
@@ -162,7 +172,12 @@ class ImportarXml(SepararXml):
             feitos = []
             for tp in tipos:
                 t.log(f"  {m:02d}/{a} · {tp}: importando {cont[tp][1]} XML…")
-                res = imp.importar_tipo(t, tp, self._no_dominio(t, pasta_mes / tp), f"{mmaaaa}\\{tp}", simular)
+                pular = ()
+                if tp == "NFS-e":
+                    ops = xmls.opcoes_nfse(pasta_mes / tp, self._cnpj(codigo))
+                    pular = tuple(n for n, chave in (("Serviço tomado", "tomado"), ("Serviço prestado", "prestado"))
+                                  if chave not in ops)
+                res = imp.importar_tipo(t, tp, self._no_dominio(t, pasta_mes / tp), f"{mmaaaa}\\{tp}", simular, pular)
                 if not simular:
                     xmls.marcar_importados(pasta_mes, [tp])
                 feitos.append(f"{tp} ({cont[tp][1]}): " + " | ".join(res))

@@ -14,7 +14,8 @@ XIS, RX = (1000, 183), (1180, 172)
 
 
 class Dom:
-    def __init__(self, tipo="CT-e", colagem_ok=True, sem_resumo=False):
+    def __init__(self, tipo="CT-e", colagem_ok=True, sem_resumo=False, so_erros=False):
+        self.so_erros = so_erros
         self.cfg, self.P, self.R, self.T = cfg, cfg["pontos"], cfg["regioes"], dict(cfg["tempos"], importacao=60)
         self.tipo, self.colagem_ok, self.sem_resumo = tipo, colagem_ok, sem_resumo
         self.janela = self.sel = self.resumo = False
@@ -121,7 +122,11 @@ class Dom:
                 ("notas canceladas", 403, 444, 90, 14), ("todos", 364, 491, 30, 14)]
 
     def escuros_em(self, x, y):
-        return 13 if self.radio is not None and abs(y - self.radio) < 3 else 1
+        if self.radio is not None and abs(y - self.radio) < 3 and x < 700:
+            return 13
+        if (x, y) in ((1000, 600), (460, 237)):         # Gravar e aba 'Registros'
+            return 1 if self.so_erros else 13
+        return 1
 
     def palavras(self, regiao):
         x0, y0 = regiao[0], regiao[1]
@@ -167,4 +172,12 @@ except Parar as e:
 dm = Dom(sem_resumo=True)
 r = imp.importar_tipo(dm, "CT-e", r"M:\x\112026\CT-e", "112026\\CT-e", simular=False)
 assert all("nada a importar" in x for x in r) and dm.gravados == [], r
+dm = Dom(so_erros=True)
+r = imp.importar_tipo(dm, "CT-e", r"M:\x\112026\CT-e", "112026\\CT-e", simular=False)
+print(r)
+assert all("nada a gravar" in x for x in r) and dm.gravados == [] and not dm.resumo, r
+
+dm = Dom()
+r = imp.importar_tipo(dm, "CT-e", r"M:\x\112026\CT-e", "112026\\CT-e", simular=False, pular=("Notas canceladas",))
+assert dm.gravados == [409] and len(r) == 1, (dm.gravados, r)
 print("ok: fluxo da importação de XML")

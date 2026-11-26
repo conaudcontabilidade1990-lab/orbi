@@ -151,3 +151,27 @@ def resumo(contagem):
 
 def pendentes(contagem):
     return sum(v[1] for t, v in contagem.items() if t != OUTROS and isinstance(v, tuple))
+
+
+def prestador_nfse(nome_arquivo):
+    """CNPJ/CPF do prestador pela chave da NFS-e nacional (50 dígitos):
+    município(7) + ambiente(1) + tipo de inscrição(1) + inscrição(14) + número(13) + AAMM(4) + código(9) + DV(1)."""
+    chave = re.sub(r"\D", "", Path(nome_arquivo).stem)
+    return chave[9:23] if len(chave) == 50 else ""
+
+
+def opcoes_nfse(pasta_tipo, cnpj_empresa):
+    """Quais importações de NFS-e fazem sentido para o zip pendente: {'tomado', 'prestado'}.
+    Sem CNPJ da empresa (ou sem lista), devolve as duas."""
+    cnpj = re.sub(r"\D", "", cnpj_empresa or "")
+    nomes = _nomes(Path(pasta_tipo) / "pendentes.txt")
+    if len(cnpj) not in (11, 14) or not nomes:
+        return {"tomado", "prestado"}
+    alvo = cnpj.zfill(14)
+    ops = set()
+    for n in nomes:
+        p = prestador_nfse(n)
+        if not p:
+            return {"tomado", "prestado"}
+        ops.add("prestado" if p == alvo else "tomado")
+    return ops

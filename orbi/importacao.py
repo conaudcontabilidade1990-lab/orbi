@@ -268,8 +268,19 @@ def importar_e_gravar(t, xis, simular, log):
         return "simulação: chegou ao Resumo dos Dados e cancelou (nada gravado)"
 
     gravar = next((p for p in botoes if p[0].startswith("grav") and not p[0].startswith("gravad")), None)
-    if not gravar:
+    registros = _palavra(t, abas, lambda w: w.startswith("registro"))
+    desabilitado = (gravar and t.escuros_em(*_centro(gravar)) < 6) or \
+        (registros and t.escuros_em(*_centro(registros)) < 6)
+    if not gravar and not desabilitado:
         raise Parar("Não achei o botão Gravar do Resumo dos Dados.")
+    if desabilitado:
+        # nada para gravar nesta opção (ex.: nota tomada lida como 'prestado' só gera erros): cancela e segue
+        if cancelar:
+            t.clicar_em(*_centro(cancelar), espera=1.0)
+        t.aguardar(lambda: not _janela(t, "resumo"), 10, intervalo=0.5)
+        if _janela(t, "resumo"):
+            raise Parar("O Resumo dos Dados não tinha nada para gravar e não fechou no Cancelar.")
+        return "nada a gravar nesta opção (o Domínio só mostrou erros) — cancelado"
     t.clicar_em(*_centro(gravar), espera=1.0)
     resultado = {}
 
@@ -297,8 +308,12 @@ def importar_e_gravar(t, xis, simular, log):
         t.clicar_em(*_centro(cancelar), espera=1.0)   # fecha o Resumo (já gravado)
     t.aguardar(lambda: not _janela(t, "resumo"), 10, intervalo=0.5)
     txt = resultado["txt"]
-    i = txt.find("produtos")
-    return re.sub(r"\s+", " ", txt[i if i >= 0 else 0:])[:300]
+    i = txt.find("gravados com sucesso")
+    txt = txt[i + len("gravados com sucesso"):] if i >= 0 else txt
+    partes = re.findall(r"([a-z ]+?):\s*(\d+)\s*registro", txt)
+    if partes:
+        return "gravado — " + ", ".join(f"{n.strip()}: {q}" for n, q in partes)
+    return "gravado — " + re.sub(r"\s+", " ", txt.strip(" !."))[:200]
 
 
 def fechar_tela(t, xis):
@@ -312,12 +327,15 @@ def fechar_tela(t, xis):
     d.fechar_janelas_abertas(t)
 
 
-def importar_tipo(t, tipo, pasta_dominio, esperado, simular):
-    """Importa o zip de um tipo (todas as opções dele). Devolve a lista de resultados por opção."""
+def importar_tipo(t, tipo, pasta_dominio, esperado, simular, pular=()):
+    """Importa o zip de um tipo (as opções dele, menos as de 'pular'). Devolve os resultados por opção."""
     xis = abrir_tela(t, tipo)
     escolher_pasta(t, xis, pasta_dominio, esperado)
     resultados = []
     for nome, aceita in TIPOS[tipo][1]:
+        if nome in pular:
+            t.log(f"    {tipo} · {nome}: pulado (nenhuma nota desse tipo no zip)")
+            continue
         marcar_opcao(t, xis, nome, aceita)
         r = importar_e_gravar(t, xis, simular, t.log)
         t.log(f"    {tipo} · {nome}: {r}")
