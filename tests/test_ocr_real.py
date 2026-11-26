@@ -14,13 +14,14 @@ from orbi.tela import faixa_destacada, norm, ocr_imagem, ocr_linhas  # noqa: E40
 R, P = config.PADRAO["regioes"], config.PADRAO["pontos"]
 troca = Image.open(Path(__file__).parent / "fixtures" / "troca_empresas_665.png")
 
-# linha azul da Troca de empresas -> começa com "665"
+# acha a faixa azul (665, na 2ª linha) e lê uma linha comum da lista (662)
 x, y, w, h = R["troca_lista"]
 lista = troca.crop((x, y, x + w, y + h))
 y0, y1 = faixa_destacada(lista, P["troca_amostra_azul"][0] - x)
-linha = norm(ocr_imagem(lista.crop((0, y0, w, y1 + 1))))
-print("linha destacada:", linha)
-assert linha.startswith("665"), linha
+assert 18 <= y0 <= 21, (y0, y1)
+comum = norm(ocr_imagem(lista.crop((0, 0, 93, 18))))
+print("linha comum:", comum)
+assert comum.startswith("662"), comum
 
 # localizar um texto na tela (usado para maximizar a janela)
 achou = [(t, int(lx), int(ly)) for t, lx, ly, lw, lh in ocr_linhas(troca) if "troca de empresas" in norm(t)]

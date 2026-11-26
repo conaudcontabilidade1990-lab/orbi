@@ -51,22 +51,21 @@ def trocar_empresa(t, codigo):
     t.teclas("ctrl", "a")
     t.digitar(codigo, espera=1)
     padrao = re.compile(rf"\s*{re.escape(codigo)}(?!\d)")
-    fim = time.time() + espera            # o Domínio às vezes demora a redesenhar a lista
     xa = t.P["troca_amostra_azul"][0]
+    fim = time.time() + 4                # o Domínio às vezes demora a redesenhar a lista
     linha = t.ler_linha_destacada("troca_lista", xa)
     while not padrao.match(linha) and time.time() < fim:
         t.dormir(0.7)
         linha = t.ler_linha_destacada("troca_lista", xa)
     if not padrao.match(linha):
-        t.clicar("troca_fechar", espera=1)
-        raise Parar(f"A empresa {codigo} não apareceu selecionada na Troca de empresas "
-                    f"(linha lida: '{linha}'). Confira se o código existe e está ativo. Não acessei.")
+        # a leitura de texto branco sobre azul falha às vezes; quem decide é o canto da tela
+        t.log(f"  (linha selecionada lida como '{linha}'; vou confirmar pelo canto da tela)")
     t.clicar("troca_acessar", espera=3)
     fim = time.time() + espera
     while not empresa_ativa_e(t, codigo):
         if time.time() > fim:
-            raise Parar(f"Não consegui confirmar que a empresa {codigo} ficou ativa "
-                        f"(lido no canto: '{t.ler('empresa_ativa')}').")
+            raise Parar(f"A empresa ativa não ficou {codigo} (lido no canto: '{t.ler('empresa_ativa')}'). "
+                        "Confira se o código existe e está ativo. Nada foi feito nessa empresa.")
         t.dormir(1)
     t.log(f"  empresa {codigo} ativa")
 
