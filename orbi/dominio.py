@@ -33,7 +33,12 @@ def trazer_para_frente(t):
 
 
 def empresa_ativa_e(t, codigo):
-    return re.search(rf"\b{re.escape(codigo)}\b", t.ler("empresa_ativa")) is not None
+    """Confere o código da empresa ativa no canto superior direito. Lê a linha inteira e, se o
+    código não vier (nome longe do código), lê só a área do código."""
+    padrao = re.compile(rf"(?<!\d){re.escape(codigo)}(?!\d)")
+    if padrao.search(t.ler("empresa_ativa")):
+        return True
+    return padrao.search(t.ler("empresa_codigo")) is not None
 
 
 def trocar_empresa(t, codigo):
@@ -64,7 +69,8 @@ def trocar_empresa(t, codigo):
     fim = time.time() + espera
     while not empresa_ativa_e(t, codigo):
         if time.time() > fim:
-            raise Parar(f"A empresa ativa não ficou {codigo} (lido no canto: '{t.ler('empresa_ativa')}'). "
+            raise Parar(f"A empresa ativa não ficou {codigo} (lido no canto: '{t.ler('empresa_ativa')}' / "
+                        f"'{t.ler('empresa_codigo')}'). "
                         "Confira se o código existe e está ativo. Nada foi feito nessa empresa.")
         t.dormir(1)
     t.log(f"  empresa {codigo} ativa")

@@ -12,7 +12,7 @@ PASTA = Path(os.environ.get("APPDATA", Path.home())) / "Orbi"
 PASTA_LOGS = PASTA / "logs"
 ARQUIVO = PASTA / "config.json"
 
-ESQUEMA = 7  # sobe quando pontos/regiões padrão mudam; ajustes antigos são descartados
+ESQUEMA = 8  # sobe quando pontos/regiões padrão mudam; ajustes antigos são descartados
 
 PADRAO = {
     "resolucao": [1366, 768],
@@ -49,7 +49,8 @@ PADRAO = {
     "regioes": {
         "titulo_app": [0, 0, 700, 24],          # título do Domínio; com janela maximizada traz [Gerar Parcelas...]
         "mensagem": [250, 300, 866, 180],
-        "empresa_ativa": [1150, 60, 216, 52],   # "ADEMIR BELTRANI - 611" (normal ou com janela maximizada)
+        "empresa_ativa": [1150, 60, 216, 52],   # "NOME DA EMPRESA - 611" (normal ou com janela maximizada)
+        "empresa_codigo": [1290, 60, 76, 52],   # só o "- 611" (o OCR às vezes pula o código na linha inteira)
         "troca_titulo": [433, 133, 250, 18],    # título "Troca de empresas"
         "troca_lista": [455, 289, 440, 380],    # lista da Troca de empresas (procura a linha azul)
         "dialogo_gerar": [294, 190, 782, 400],
