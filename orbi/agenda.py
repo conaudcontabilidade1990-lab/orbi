@@ -186,8 +186,11 @@ def descrever_dias(dias):
 
 
 def competencia_de(regra, hoje=None):
-    """'anterior' | 'atual' -> ((ano, mês), (ano, mês)); vazio -> None."""
+    """'anterior' | 'atual' | 'anterior_atual' -> ((ano, mês), (ano, mês)); vazio -> None."""
     hoje = hoje or dt.date.today()
+    if regra == "anterior_atual":
+        m = hoje.replace(day=1) - dt.timedelta(days=1)
+        return (m.year, m.month), (hoje.year, hoje.month)
     if regra == "atual":
         c = (hoje.year, hoje.month)
     elif regra == "anterior":

@@ -131,7 +131,8 @@ class PaginaAgenda:
         rot = next((r for r in self.app.todas_rotinas() if r.id == ag.get("rotina")), None)
         emp = (f"seleção \"{ag.get('selecaoNome', '?')}\"" if ag.get("fonte") == "selecao"
                else f"{len(ag.get('codigos') or [])} empresa(s) por código")
-        comp = {"anterior": " · competência: mês anterior", "atual": " · competência: mês atual"}.get(ag.get("competencia"), "")
+        comp = {"anterior": " · competência: mês anterior", "atual": " · competência: mês atual",
+                "anterior_atual": " · competência: mês anterior e atual"}.get(ag.get("competencia"), "")
         prox = agenda.proxima(ag, agora)
         ult = ag.get("ultima")
         info = (f"{rot.nome if rot else ag.get('rotina')} · {emp}{comp}\n"
@@ -206,8 +207,9 @@ class Formulario(ctk.CTkToplevel):
         self.fr_comp = ctk.CTkFrame(f, fg_color="transparent")
         self.fr_comp.pack(fill="x")
         ctk.CTkLabel(self.fr_comp, text="COMPETÊNCIA", font=F(11, "bold"), text_color=COR["suave"], anchor="w").pack(fill="x", pady=(10, 2))
-        self.var_comp = tk.StringVar(value={"atual": "Mês atual"}.get(ag.get("competencia"), "Mês anterior"))
-        ctk.CTkOptionMenu(self.fr_comp, variable=self.var_comp, values=["Mês anterior", "Mês atual"], **om).pack(fill="x")
+        self.var_comp = tk.StringVar(value={"atual": "Mês atual", "anterior_atual": "Mês anterior e atual"}
+                                     .get(ag.get("competencia"), "Mês anterior"))
+        ctk.CTkOptionMenu(self.fr_comp, variable=self.var_comp, values=["Mês anterior", "Mês atual", "Mês anterior e atual"], **om).pack(fill="x")
 
         rot("DIAS DA SEMANA")
         dias = ctk.CTkFrame(f, fg_color="transparent")
@@ -285,7 +287,8 @@ class Formulario(ctk.CTkToplevel):
         dados = {"nome": nome[:80], "rotina": r.id if r else "", "departamento": r.departamento if r else "",
                  "dias": dias, "hora": hora.zfill(5), "computador": self.pcs.get(self.var_pc.get(), ""),
                  "ativo": self.var_ativo.get(), "simular": self.var_simular.get(),
-                 "competencia": ("atual" if self.var_comp.get() == "Mês atual" else "anterior") if r and r.usa_competencia else "",
+                 "competencia": ({"Mês atual": "atual", "Mês anterior e atual": "anterior_atual"}.get(self.var_comp.get(), "anterior")
+                            if r and r.usa_competencia else ""),
                  "criadoPorNome": self.ag.get("criadoPorNome") or self.app.usuario.nome[:80]}
         if self.var_fonte.get() == "Códigos":
             cods = [c for c in re.split(r"[\s,;]+", self.var_cods.get()) if c]
