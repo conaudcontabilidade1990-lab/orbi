@@ -148,9 +148,11 @@ def escolher_pasta(t, xis, pasta_dominio, esperado):
         if len(_so(t.ler("sel_campo"))) > 2:
             t.apagar(160)
         if pasta_dominio.isascii() and tentativa != 1:
-            t.digitar(pasta_dominio, espera=0.5)   # digitado tecla a tecla (não depende da área de transferência)
+            t.digitar(pasta_dominio, espera=0.5)   # sem acento: digita tecla a tecla
         else:
-            t.colar(pasta_dominio, espera=1.5)
+            # com acento (ex.: 'Configuração HubStrom'): cola; a área de transferência do Domínio remoto
+            # demora a receber o texto, então espera mais a cada tentativa
+            t.colar(pasta_dominio, espera=1.5 + 1.5 * tentativa)
         # o Domínio remoto demora a redesenhar o campo: espera o texto aparecer
         if t.aguardar(lambda: alvo in _so(t.ler("sel_campo")).replace(" ", ""), 5, intervalo=0.5):
             break

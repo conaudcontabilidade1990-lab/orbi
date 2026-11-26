@@ -119,19 +119,6 @@ class ImportarXml(SepararXml):
                 pulos[cod] = "nada novo para importar"
         return manter, pulos
 
-    @staticmethod
-    def _pasta_curta(zip_, tipo):
-        """Copia o zip para C:\\Users\\Public\\OrbiImport\\<tipo> (caminho curto e sem acento: o campo
-        Caminho do Domínio corta textos longos e a área de transferência remota falha com acentos)."""
-        import os
-        import shutil
-        destino = Path(os.environ.get("PUBLIC", r"C:\Users\Public")) / "OrbiImport" / tipo
-        if destino.exists():
-            shutil.rmtree(destino, ignore_errors=True)
-        destino.mkdir(parents=True, exist_ok=True)
-        shutil.copy2(zip_, destino / Path(zip_).name)
-        return destino
-
     def _no_dominio(self, t, caminho):
         """C:\\... deste computador -> unidade que o Domínio enxerga (padrão M:)."""
         p = str(caminho)
@@ -151,6 +138,7 @@ class ImportarXml(SepararXml):
         if not emp:
             t.aviso("sem pasta da empresa")
             return f"não há pasta '{codigo}-…' em {base}"
+        _limpar_pasta_antiga()
         partes, trocou = [], False
         for a, m in self.meses():
             t.checar()
@@ -174,10 +162,18 @@ class ImportarXml(SepararXml):
             feitos = []
             for tp in tipos:
                 t.log(f"  {m:02d}/{a} · {tp}: importando {cont[tp][1]} XML…")
-                curta = self._pasta_curta(pasta_mes / tp / f"{tp}.zip", tp)
-                res = imp.importar_tipo(t, tp, self._no_dominio(t, curta), f"orbiimport\\{tp}", simular)
+                res = imp.importar_tipo(t, tp, self._no_dominio(t, pasta_mes / tp), f"{mmaaaa}\\{tp}", simular)
                 if not simular:
                     xmls.marcar_importados(pasta_mes, [tp])
                 feitos.append(f"{tp} ({cont[tp][1]}): " + " | ".join(res))
             partes.append(f"{m:02d}/{a}: " + "; ".join(feitos))
         return ("simulação — " if simular else "importado — ") + " / ".join(partes)
+
+
+def _limpar_pasta_antiga():
+    """Versões 0.9.7/0.9.8 copiavam o zip para C:\\Users\\Public\\OrbiImport; não usa mais."""
+    import os
+    import shutil
+    antiga = Path(os.environ.get("PUBLIC", r"C:\Users\Public")) / "OrbiImport"
+    if antiga.exists():
+        shutil.rmtree(antiga, ignore_errors=True)
