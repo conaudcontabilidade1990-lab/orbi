@@ -5,6 +5,8 @@ Regras (iguais às rotinas manuais):
 - seleção só pelo botão Todos; parcelas = 1; vencimento "Informar" com 1 dia;
 - nunca "Excluir Parcelas"; nunca gerar duas vezes; qualquer coisa fora do previsto = parar.
 """
+import re
+
 from .. import dominio as d
 from ..tela import Parar
 from .base import Rotina
@@ -160,15 +162,32 @@ class GerarParcelasEntradas(GerarParcelas):
         t.clicar("ba_coluna", espera=0.4)
         t.digitar("a", espera=0.6)               # "Acumulador" é a única coluna com A
         t.clicar("ba_valor", triplo=True, espera=0.3)
-        t.digitar(self.ACUMULADOR, espera=0.5)
-        linha = t.ler("ba_linha")
-        compacta = linha.replace(" ", "")
-        if "acumulador" not in linha or "iguala" not in compacta or self.ACUMULADOR not in compacta:
+        t.digitar(self.ACUMULADOR, espera=0.2)
+        t.teclas("tab")                          # tira o cursor do Valor (vai para Operador)
+        t.dormir(0.5)
+        ok_col, ok_cond, valor, lidos = self._ler_filtro(t)
+        if not (ok_col and ok_cond and valor == self.ACUMULADOR):
+            t.dormir(0.8)                        # tela ainda redesenhando: lê de novo
+            ok_col, ok_cond, valor, lidos = self._ler_filtro(t)
+        if not (ok_col and ok_cond and valor == self.ACUMULADOR):
             t.clicar("ba_cancelar", espera=0.5)
-            raise Parar(f"Não consegui montar o filtro 'Acumulador igual a {self.ACUMULADOR}' "
-                        f"(lido: '{linha}'). Nada foi gerado.")
+            raise Parar(f"Não consegui confirmar o filtro 'Acumulador igual a {self.ACUMULADOR}' "
+                        f"(lido: {lidos}). Nada foi gerado.")
         t.clicar("ba_ok", espera=0.2)
         return self._resultado_busca(t)
+
+    def _ler_filtro(self, t):
+        """Confere célula por célula (ler a linha inteira cortava a 1ª e a última letra)."""
+        coluna = t.ler("ba_coluna_cel", fator=4, borda=8)
+        condicao = t.ler("ba_condicao_cel", fator=4, borda=8).replace(" ", "")
+        valor = ""
+        for fator in (4, 6):
+            valor = re.sub(r"\D", "", t.ler("ba_valor_cel", fator=fator, binarizar=True, borda=12))
+            if valor == self.ACUMULADOR:
+                break
+        ok_col = "cumulador" in coluna or "acumul" in coluna
+        ok_cond = "igual" in condicao
+        return ok_col, ok_cond, valor, f"coluna '{coluna}', condição '{condicao}', valor '{valor}'"
 
     def _reabrir(self, t):
         d.fechar_janela(t)

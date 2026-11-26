@@ -47,3 +47,20 @@ lido = norm(ocr_imagem(cod.crop((x, y, x + w, y + h)), fator=4, binarizar=True, 
 print("código da empresa:", lido)
 assert "214" in lido.replace(" ", ""), lido
 print("ok: código da empresa ativa")
+
+# Busca avançada célula por célula (como a rotina faz): coluna, condição e valor ("0" na tela de teste)
+from orbi.tela import preparar  # noqa: E402,F401
+
+
+def cel(nome, **k):
+    x, y, w, h = R[nome]
+    return norm(ocr_imagem(ba.crop((x, y, x + w, y + h)), **k))
+
+
+col, cond = cel("ba_coluna_cel", fator=4, borda=8), cel("ba_condicao_cel", fator=4, borda=8)
+val = cel("ba_valor_cel", fator=4, binarizar=True, borda=12)
+print("células:", col, "|", cond, "|", val)
+assert "cumulador" in col, col
+assert "igual" in cond.replace(" ", ""), cond
+assert val.strip() in ("0", "o"), val
+print("ok: células da Busca avançada")

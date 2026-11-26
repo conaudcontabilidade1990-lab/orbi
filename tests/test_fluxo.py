@@ -81,7 +81,8 @@ class Dominio:
                 "titulo_app": f"dominio escrita fiscal [gerar parcelas de notas de {self.menu}]" if self.janela else "dominio escrita fiscal",
                 "troca_titulo": "troca de empresas", "botao_buscar": "buscar",
                 "ba_titulo": "busca avangada" if self.ba else "",
-                "ba_linha": "acumulador igual a 2554",
+                "ba_linha": "cumulador igual a 255",
+                "ba_coluna_cel": "acumulador", "ba_condicao_cel": "igual a", "ba_valor_cel": "2554",
                 "campo_vencimento": "informar",
                 "mensagem": "nao foram encontrados registros" if (self._buscou and not self._tem()) else "",
                 "dialogo_gerar": "quantidade de parcelas vencimento" if self.dlg else ""}.get(r, "")

@@ -12,7 +12,7 @@ PASTA = Path(os.environ.get("APPDATA", Path.home())) / "Orbi"
 PASTA_LOGS = PASTA / "logs"
 ARQUIVO = PASTA / "config.json"
 
-ESQUEMA = 9  # sobe quando pontos/regiões padrão mudam; ajustes antigos são descartados
+ESQUEMA = 10  # sobe quando pontos/regiões padrão mudam; ajustes antigos são descartados
 
 PADRAO = {
     "resolucao": [1366, 768],
@@ -61,6 +61,9 @@ PADRAO = {
         "lista_1a_linha": [40, 282, 560, 15],    # 1ª linha da lista de notas (janela maximizada)
         "ba_titulo": [372, 281, 250, 16],        # "Busca avançada"
         "ba_linha": [394, 347, 474, 18],         # Coluna | Condição | Valor da 1ª linha do filtro
+        "ba_coluna_cel": [396, 349, 92, 15],     # célula Coluna (sem a seta)
+        "ba_condicao_cel": [509, 349, 86, 15],   # célula Condição
+        "ba_valor_cel": [602, 349, 209, 15],     # célula Valor (número alinhado à direita)
     },
     # Preferências da tela
     "ultima_rotina": "",
