@@ -74,6 +74,9 @@ PADRAO = {
     "ultima_selecao": "",
     "comp_ini": "",
     "comp_fim": "",
+    "apelido_pc": "",
+    "bandeja": True,
+    "iniciar_windows": False,
     "tema": "claro",
 }
 
@@ -87,7 +90,7 @@ def _mesclar(base, extra):
     return base
 
 
-PREFERENCIAS = ("ultima_rotina", "ultimas_empresas", "ultimo_email", "lembrar", "tema", "fonte_empresas", "ultima_selecao", "comp_ini", "comp_fim")
+PREFERENCIAS = ("ultima_rotina", "ultimas_empresas", "ultimo_email", "lembrar", "tema", "fonte_empresas", "ultima_selecao", "comp_ini", "comp_fim", "apelido_pc", "bandeja", "iniciar_windows")
 
 
 def _diferenca(atual, base):

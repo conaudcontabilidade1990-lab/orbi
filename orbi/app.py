@@ -22,7 +22,7 @@ except Exception:
 import customtkinter as ctk
 from PIL import Image
 
-from . import VERSAO, atualizacao, conta, estatisticas, portal, sessao
+from . import VERSAO, agenda, atualizacao, conta, estatisticas, portal, sessao
 from . import config as cfgmod
 from .borda import Borda
 from .graficos import COR, Anel, Barras, contar, cor
@@ -64,6 +64,14 @@ class App:
         self.empresas, self.empresas_quando = portal.empresas_guardadas()
         self.selecoes, self.selecoes_erro = [], ""
         self.pag_emp = None
+        self.computadores, self.agendamentos, self.agenda_erro = [], [], ""
+        self.pag_ag = None
+        self.ja_feitos = {}            # {id do agendamento: horário já executado/tentado aqui}
+        self.avisou_bloqueio = {}
+        self.agendamento_atual = None
+        self.oculto = False
+        self.tray = None
+        self._ultimo_sinal = self._ultima_agenda = 0.0
 
         ctk.set_appearance_mode({"escuro": "dark", "claro": "light"}.get(self.cfg.get("tema"), "light"))
         root.title(f"Orbi — Robô da Conaud Contabilidade · v{VERSAO}")
@@ -235,6 +243,11 @@ class App:
         cfgmod.salvar(self.cfg)
         self._tela_principal()
         self.carregar_empresas()
+        self.carregar_agenda()
+        self.dar_sinal()
+        if not getattr(self, "_relogio_ligado", False):
+            self._relogio_ligado = True
+            self.root.after(20000, self._relogio)
 
     def _sair(self):
         if self.rodando:
@@ -264,7 +277,8 @@ class App:
                      text_color=COR["suave"], justify="left").pack(anchor="w")
 
         self.nav = {}
-        itens = [("executar", "▶   Executar"), ("empresas", "▤   Empresas"), ("painel", "▦   Painel")]
+        itens = [("executar", "▶   Executar"), ("empresas", "▤   Empresas"), ("agenda", "◷   Agenda"),
+                 ("painel", "▦   Painel")]
         if self.usuario.admin:
             itens.append(("calibrar", "⚙   Calibrar"))
         for chave, texto in itens:
@@ -589,6 +603,199 @@ class App:
             self.pag_emp.desenhar_selecoes()
         self._atualizar_fonte()
 
+    # ------------------------------ página Agenda ------------------------------
+    def _pagina_agenda(self):
+        from .pagina_agenda import PaginaAgenda
+        self.pag_ag = PaginaAgenda(self)
+        return self.pag_ag.pg
+
+    def todas_rotinas(self):
+        return ROTINAS
+
+    def definir_opcao(self, chave, valor):
+        self.cfg[chave] = valor
+        cfgmod.salvar(self.cfg)
+
+    def definir_iniciar_windows(self, ligar):
+        """Atalho no 'Executar' do Windows (HKCU\\...\\Run) para abrir o Orbi na bandeja ao entrar."""
+        self.definir_opcao("iniciar_windows", bool(ligar))
+        try:
+            import winreg
+            chave = winreg.OpenKey(winreg.HKEY_CURRENT_USER, r"Software\Microsoft\Windows\CurrentVersion\Run",
+                                   0, winreg.KEY_SET_VALUE)
+            if ligar:
+                winreg.SetValueEx(chave, "Orbi", 0, winreg.REG_SZ, f'"{sys.executable}" --bandeja')
+            else:
+                try:
+                    winreg.DeleteValue(chave, "Orbi")
+                except FileNotFoundError:
+                    pass
+            winreg.CloseKey(chave)
+        except Exception as e:
+            messagebox.showwarning("Orbi", f"Não foi possível ajustar a abertura com o Windows: {e}")
+
+    def dar_sinal(self):
+        u = self.usuario
+        if not u:
+            return
+        self._ultimo_sinal = time.time()
+        apelido = self.cfg.get("apelido_pc", "")
+
+        def trabalho():
+            try:
+                agenda.sinal(u, apelido)
+            except Exception:
+                pass
+        self._em_thread(trabalho)
+
+    def carregar_agenda(self):
+        u = self.usuario
+        if not u:
+            return
+        self._ultima_agenda = time.time()
+
+        def trabalho():
+            try:
+                self.fila.put(("agenda", (agenda.listar_computadores(u), agenda.listar(u), "")))
+            except Exception as e:
+                msg = ("A Agenda ainda não está liberada no portal." if "permiss" in str(e).lower()
+                       else f"Agenda indisponível: {e}")
+                self.fila.put(("agenda", ([], [], msg)))
+        self._em_thread(trabalho)
+
+    def salvar_agenda(self, fazer):
+        u = self.usuario
+
+        def trabalho():
+            try:
+                fazer(u)
+            except Exception as e:
+                self.fila.put(("aviso", f"Não foi possível salvar a Agenda no portal:\n{e}"))
+            self.carregar_agenda()
+        self._em_thread(trabalho)
+
+    def _agenda_chegou(self, pcs, ags, erro):
+        self.computadores, self.agendamentos, self.agenda_erro = pcs, ags, erro
+        if self.pag_ag and self.pag_ag.pg.winfo_exists():
+            self.pag_ag.atualizar()
+
+    def _relogio(self):
+        """A cada 30 s: sinal de vida, agenda atualizada e agendamentos deste computador na hora."""
+        try:
+            if self.usuario:
+                agora_s = time.time()
+                if agora_s - self._ultimo_sinal > 300:
+                    self.dar_sinal()
+                if agora_s - self._ultima_agenda > 120:
+                    self.carregar_agenda()
+                if not self.rodando:
+                    self._verificar_agenda()
+        except Exception:
+            self._erro_interface(*sys.exc_info())
+        self.root.after(30000, self._relogio)
+
+    def _verificar_agenda(self):
+        este, agora = agenda.este_computador(), dt.datetime.now()
+        for ag in self.agendamentos:
+            if ag.get("computador") != este:
+                continue
+            alvo = agenda.devido(ag, agora, self.ja_feitos)
+            if not alvo:
+                continue
+            if agenda.tela_bloqueada():
+                if self.avisou_bloqueio.get(ag["id"]) != alvo:
+                    self.avisou_bloqueio[ag["id"]] = alvo
+                    self.log(f"Agenda: \"{ag.get('nome')}\" adiado — o Windows está bloqueado. "
+                             "Tento de novo a cada 30 s (até 2 h depois do horário).")
+                continue
+            self.ja_feitos[ag["id"]] = alvo
+            self.executar_agendamento(ag)
+            return
+
+    def executar_agendamento(self, ag, manual=False):
+        if self.rodando:
+            if manual:
+                messagebox.showinfo("Orbi", "Já existe uma rotina em execução.")
+            return
+        rot = next((r for r in ROTINAS if r.id == ag.get("rotina")), None)
+        problema = ""
+        if not rot:
+            problema = f"rotina '{ag.get('rotina')}' não existe nesta versão do Orbi"
+        elif rot.departamento not in self.usuario.departamentos():
+            problema = "o usuário logado neste computador não tem acesso ao departamento da rotina"
+        empresas, nomes = [], {}
+        if not problema:
+            if ag.get("fonte") == "selecao":
+                sel = next((s for s in self.selecoes if s.get("id") == ag.get("selecaoId")), None)
+                if not sel:
+                    problema = f"a seleção \"{ag.get('selecaoNome')}\" não existe mais"
+                else:
+                    lista = [e for e in portal.aplicar_filtros(self.empresas, sel.get("filtros") or {}) if e["codigo"]]
+                    empresas, nomes = [e["codigo"] for e in lista], {e["codigo"]: e["nome"] for e in lista}
+            else:
+                por = {e["codigo"]: e["nome"] for e in self.empresas if e["codigo"]}
+                empresas = list(ag.get("codigos") or [])
+                nomes = {c: por.get(c, "") for c in empresas}
+            if not problema and not empresas:
+                problema = "nenhuma empresa para processar"
+        if problema:
+            self.log(f"Agenda: \"{ag.get('nome')}\" não executado — {problema}.")
+            self._resultado_agenda(ag, f"não executado: {problema}", {})
+            return
+        simular = bool(ag.get("simular"))
+        if manual and not simular and not messagebox.askyesno(
+                "Orbi — GERAÇÃO REAL", f"Executar agora \"{ag.get('nome')}\" em {len(empresas)} empresa(s), "
+                                       "GERANDO DE VERDADE?", icon="warning"):
+            return
+        rot.competencia = agenda.competencia_de(ag.get("competencia")) if rot.usa_competencia else None
+        self.nomes_exec = nomes
+        self.agendamento_atual = ag
+        self.mostrar("executar")
+        self.log(f"Agenda: executando \"{ag.get('nome')}\" ({'manual' if manual else 'no horário'}).")
+        self._comecar(rot, empresas, simular)
+
+    def _resultado_agenda(self, ag, resumo, contagem):
+        u = self.usuario
+        pc = agenda.este_computador()
+
+        def trabalho():
+            try:
+                agenda.registrar_execucao(u, ag, resumo, contagem, pc)
+            except Exception as e:
+                self.log(f"Agenda: não consegui gravar o resultado no portal ({e}).")
+            self.carregar_agenda()
+        self._em_thread(trabalho)
+        self.notificar(f"{ag.get('nome')}: {resumo}")
+
+    # ------------------------------ bandeja ------------------------------
+    def iniciar_bandeja(self):
+        try:
+            import pystray
+            img = Image.open(recurso("orbi/recursos/logo.png")).resize((64, 64))
+            menu = pystray.Menu(pystray.MenuItem("Abrir o Orbi", lambda i, it: self.fila.put(("mostrar", None)), default=True),
+                                pystray.MenuItem("Sair", lambda i, it: self.fila.put(("sair", None))))
+            self.tray = pystray.Icon("Orbi", img, "Orbi — Robô da Conaud Contabilidade", menu)
+            self.tray.run_detached()
+        except Exception:
+            self.tray = None
+
+    def notificar(self, texto):
+        try:
+            if self.tray:
+                self.tray.notify(texto[:250], "Orbi")
+        except Exception:
+            pass
+
+    def mostrar_janela(self):
+        self.oculto = False
+        self.root.deiconify()
+        self.root.lift()
+        self._aparecer()
+
+    def ocultar_na_bandeja(self):
+        self.oculto = True
+        self.root.withdraw()
+
     # ------------------------------ página Painel ------------------------------
     def _pagina_painel(self):
         pg = ctk.CTkFrame(self.conteudo, fg_color="transparent")
@@ -694,6 +901,8 @@ class App:
         fundo = cor("cartao", self.escuro)
         if self.pag_emp and self.pag_emp.pg.winfo_exists():
             self.pag_emp.tema()
+        if self.pag_ag and self.pag_ag.pg.winfo_exists():
+            self.pag_ag.atualizar()
         for g in (getattr(self, "anel", None), getattr(self, "barras", None)):
             try:
                 if g and g.c.winfo_exists():
@@ -724,6 +933,14 @@ class App:
                     self._fim()
                 elif alvo == "empresas":
                     self._empresas_chegaram(*msg)
+                elif alvo == "agenda":
+                    self._agenda_chegou(*msg)
+                elif alvo == "aviso":
+                    messagebox.showwarning("Orbi", msg)
+                elif alvo == "mostrar":
+                    self.mostrar_janela()
+                elif alvo == "sair":
+                    self._sair_de_vez()
                 elif alvo == "selecoes":
                     self._selecoes_chegaram(*msg)
                 elif alvo == "selecao_salva":
@@ -734,7 +951,9 @@ class App:
                     if self.pag_emp:
                         self.pag_emp.erro_salvar(msg)
                 elif alvo == "janela":
-                    if msg == "minimizar":
+                    if self.oculto:
+                        pass
+                    elif msg == "minimizar":
                         self.root.iconify()
                     else:
                         self.root.deiconify()
@@ -830,6 +1049,10 @@ class App:
         if competencia:
             self.cfg["comp_ini"], self.cfg["comp_fim"] = self.var_comp_ini.get().strip(), self.var_comp_fim.get().strip()
         cfgmod.salvar(self.cfg)
+        self.agendamento_atual = None
+        self._comecar(rot, empresas, simular)
+
+    def _comecar(self, rot, empresas, simular):
         self.parar.clear()
         self.rodando = True
         self.total_exec = len(empresas)
@@ -954,9 +1177,17 @@ class App:
             self.lbl_status.configure(text="Concluído.")
         except tk.TclError:
             pass
-        self.root.deiconify()
-        self.root.lift()
-        self._aparecer()
+        ag, self.agendamento_atual = self.agendamento_atual, None
+        if ag:
+            c = getattr(self, "num_exec", {})
+            nao = self.total_exec - getattr(self, "feitos_exec", 0)
+            resumo = (f"{c.get('sucesso', 0)} ok, {c.get('advertencia', 0)} com advertência, {c.get('erro', 0)} com erro"
+                      + (f", {nao} não processada(s)" if nao else "") + (" (simulação)" if ag.get("simular") else ""))
+            self._resultado_agenda(ag, resumo, c)
+        if not self.oculto:
+            self.root.deiconify()
+            self.root.lift()
+            self._aparecer()
 
     # ------------------------------ calibração ------------------------------
     def _calibrar(self):
@@ -1009,14 +1240,34 @@ class App:
             self.log(f"Não foi possível atualizar agora: {e}")
 
     def _fechar(self):
+        if self.cfg.get("bandeja", True) and self.tray and self.usuario:
+            self.ocultar_na_bandeja()
+            if not self.cfg.get("_avisou_bandeja"):
+                self.cfg["_avisou_bandeja"] = True
+                self.notificar("O Orbi continua rodando na bandeja (perto do relógio) para a Agenda.")
+            return
+        self._sair_de_vez()
+
+    def _sair_de_vez(self):
         if self.rodando and not messagebox.askyesno("Orbi", "Uma rotina está em execução. Parar e fechar?"):
             return
         self.parar.set()
-        self.borda.esconder()
+        try:
+            self.borda.esconder()
+        except Exception:
+            pass
+        if self.tray:
+            try:
+                self.tray.stop()
+            except Exception:
+                pass
         self.root.destroy()
 
 
 def main():
     root = ctk.CTk()
-    App(root)
+    app = App(root)
+    app.iniciar_bandeja()
+    if "--bandeja" in sys.argv and app.tray:
+        app.ocultar_na_bandeja()
     root.mainloop()

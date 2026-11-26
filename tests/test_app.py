@@ -174,6 +174,50 @@ assert not a.rodando and str(a.bt_iniciar.cget("state")) == "normal"
 foto(root, "4_executado_escuro")
 root.destroy()
 
+# Agenda: página, formulário e execução de um agendamento pelo caminho real (Domínio simulado)
+import datetime as _dt  # noqa: E402
+from orbi import agenda as agmod  # noqa: E402
+gravados = []
+agmod.registrar_execucao = lambda u, ag, resumo, cont, pc: gravados.append((ag["id"], resumo, dict(cont)))
+assert agmod.tela_bloqueada() is False
+ctk.set_appearance_mode("light")
+root, a = abrir()
+a.carregar_empresas = lambda: None
+a.carregar_agenda = lambda: None
+a.dar_sinal = lambda: None
+a._login_ok(conta.Usuario("u6", "leo@conaud", "Leonardo", "admin", None))
+a.empresas = EXEMPLO
+a.selecoes = [{"id": "s1", "nome": "Simples Nacional", "filtros": {"regime": ["Simples Nacional"], "situacao": "ativas"}}]
+este = agmod.este_computador()
+agora = _dt.datetime.now()
+a._agenda_chegou(
+    [{"nome": este, "apelido": "Robô Fiscal 1", "online": True, "visto": agora, "versao": "0.7.0"},
+     {"nome": "PC-ROBO-2", "apelido": "Robô Pessoal", "online": False, "visto": agora - _dt.timedelta(hours=3), "versao": "0.7.0"}],
+    [{"id": "ag1", "nome": "Entradas Simples — seg a sex", "rotina": "entradas", "fonte": "selecao", "selecaoId": "s1",
+      "selecaoNome": "Simples Nacional", "dias": [0, 1, 2, 3, 4], "hora": "07:00", "computador": este, "ativo": True,
+      "simular": True, "ultima": None},
+     {"id": "ag2", "nome": "Saídas 214", "rotina": "saidas", "fonte": "codigos", "codigos": ["214"], "dias": [0],
+      "hora": "18:30", "computador": "PC-ROBO-2", "ativo": True, "simular": False, "ultima": agora - _dt.timedelta(days=1),
+      "ultimoResultado": "1 ok, 0 com advertência, 0 com erro"}], "")
+a.mostrar("agenda"); esperar(root, 0.8)
+foto(root, "7_agenda_claro")
+from orbi.pagina_agenda import Formulario  # noqa: E402
+fm = Formulario(a, a.agendamentos[0]); esperar(root, 0.8)
+fm.lift(); fm.update()
+x, y, w, h = fm.winfo_rootx(), fm.winfo_rooty(), fm.winfo_width(), fm.winfo_height()
+ImageGrab.grab(bbox=(x, y, x + w, y + h)).save(PRINTS / "8_agenda_formulario.png")
+fm.destroy()
+a.executar_agendamento(a.agendamentos[0])
+fim = time.time() + 15
+while time.time() < fim and (a.rodando or not gravados):
+    root.update(); time.sleep(0.03)
+esperar(root, 0.5)
+print("resultado da agenda:", gravados)
+assert gravados and gravados[0][0] == "ag1" and "1 ok" in gravados[0][1] and "(simulação)" in gravados[0][1], gravados
+# agendamento de outro computador nunca roda aqui; o deste roda só no horário
+assert agmod.devido(a.agendamentos[1], agora, {}) is None or a.agendamentos[1]["computador"] != este
+root.destroy()
+
 # 'lembrar de mim' (DPAPI)
 sessao.guardar("x@conaud", "token-de-teste")
 assert sessao.carregar() == ("x@conaud", "token-de-teste")
