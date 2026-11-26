@@ -129,7 +129,7 @@ def _titulo_da_janela(t, xis):
 
 def _e_importacao(titulo):
     # o OCR às vezes lê 'Importação Padrão' como 'importaqao 2adrao'
-    return any(k in titulo for k in ("importa", "padrao", "adrao")) and "resumo" not in titulo
+    return any(k in titulo for k in ("importa", "padrao", "adrao")) and "resum" not in titulo
 
 
 def _janela_importacao(t):
@@ -267,7 +267,7 @@ def importar_e_gravar(t, xis, simular, log, numeros_erro=None):
             return None
         if "nao" in msg and any(k in msg for k in ("encontrad", "nenhum", "nao existem", "nao ha ")):
             return ("vazio", msg)
-        rx = _janela(t, "resumo")
+        rx = _janela(t, "resum")
         return ("resumo", rx) if rx else None
     r = t.aguardar(chegou, limite, intervalo=1.0)
     if not r:
@@ -301,7 +301,7 @@ def importar_e_gravar(t, xis, simular, log, numeros_erro=None):
         if not cancelar:
             raise Parar("Não achei o botão Cancelar do Resumo dos Dados.")
         t.clicar_em(*_centro(cancelar), espera=1.0)
-        t.aguardar(lambda: not _janela(t, "resumo"), 10, intervalo=0.5)
+        t.aguardar(lambda: not _janela(t, "resum"), 10, intervalo=0.5)
         return "simulação: chegou ao Resumo dos Dados e cancelou (nada gravado)"
 
     gravar = next((p for p in botoes if p[0].startswith("grav") and not p[0].startswith("gravad")), None)
@@ -314,8 +314,8 @@ def importar_e_gravar(t, xis, simular, log, numeros_erro=None):
         # nada para gravar nesta opção (ex.: nota tomada lida como 'prestado' só gera erros): cancela e segue
         if cancelar:
             t.clicar_em(*_centro(cancelar), espera=1.0)
-        t.aguardar(lambda: not _janela(t, "resumo"), 10, intervalo=0.5)
-        if _janela(t, "resumo"):
+        t.aguardar(lambda: not _janela(t, "resum"), 10, intervalo=0.5)
+        if _janela(t, "resum"):
             raise Parar("O Resumo dos Dados não tinha nada para gravar e não fechou no Cancelar.")
         return "nada a gravar nesta opção (o Domínio só mostrou erros) — cancelado"
     t.clicar_em(*_centro(gravar), espera=1.0)
@@ -343,7 +343,7 @@ def importar_e_gravar(t, xis, simular, log, numeros_erro=None):
                limite, intervalo=1.5)
     if cancelar:
         t.clicar_em(*_centro(cancelar), espera=1.0)   # fecha o Resumo (já gravado)
-    t.aguardar(lambda: not _janela(t, "resumo"), 10, intervalo=0.5)
+    t.aguardar(lambda: not _janela(t, "resum"), 10, intervalo=0.5)
     txt = resultado["txt"]
     i = txt.find("gravados com sucesso")
     txt = txt[i + len("gravados com sucesso"):] if i >= 0 else txt
