@@ -82,6 +82,20 @@ class Dominio:
     def ler_linha_destacada(self, r, x): return f"{self._cod} empresa"
     def ler_codigo_destacado(self, *a): return getattr(self, "lista_mostra", None) or self._cod
     def achar_texto(self, *a): return None
+    MENU = ["Alterar Cadastro de Clientes e Fornecedores", "Parcelas", "Gerar Parcelas", "Excluir Parcelas",
+            "Entradas", "Saidas", "Servigos", "Cupons Fiscais"]
+    def achar_linha(self, aceita, regiao):
+        import unicodedata
+        for i, rot in enumerate(self.MENU):
+            n = unicodedata.normalize("NFKD", rot.lower())
+            if aceita(n):
+                return (100 + i, 200, n)
+        return None
+    def clicar_em(self, x, y, espera=None):
+        rot = self.MENU[x - 100]
+        self.cl.append("menu:" + rot)
+        if rot.lower().startswith(self.menu[:4]):
+            self.janela = True
     def _dialogo(self):
         v = getattr(self, "_volta_dialogo", 0)
         if v:
@@ -96,9 +110,10 @@ class Dominio:
         if r == "ba_valor_cel": return "2554"
         return self.dias_lidos or self.dias
     def ler(self, r, digitos=False, **k):
-        return {"empresa_ativa": "nome da empresa", "empresa_codigo": f"- {self.empresa}",
+        return {"empresa_ativa": "nome da empresa",
+                "empresa_codigo": f"- {getattr(self, 'canto_lido', None) or self.empresa} out/2026" if self.empresa == getattr(self, '_cod', None) else f"- {self.empresa} out/2026",
                 "titulo_app": f"dominio escrita fiscal [gerar parcelas de notas de {self.menu}]" if self.janela else "dominio escrita fiscal",
-                "troca_titulo": "troca de empresas", "botao_buscar": "buscar",
+                "troca_titulo": "" if "troca_acessar" in self.cl[-3:] else "troca de empresas", "botao_buscar": "buscar",
                 "ba_titulo": "busca avangada" if self.ba else "",
                 "ba_linha": "cumulador igual a 255",
                 "ba_coluna_cel": "acumulador", "ba_condicao_cel": "igual a", "ba_valor_cel": "2554",
@@ -164,4 +179,15 @@ Dominio.clicar = _orig
 # janela Gerar Parcelas esquecida aberta de outra rodada: fecha antes da troca
 dm = Dominio(tem_2554=False, menu="saidas"); dm.janela = True
 print(sai.executar_empresa(dm, "214", False)); assert dm.cl.index("fechar_janela") < dm.cl.index("troca_empresa"), dm.cl[:8]
+# menu pelo texto: nunca clica em "Alterar Cadastro..." nem "Excluir Parcelas"
+assert not any("Alterar" in c or "Excluir" in c for c in dm.cl), dm.cl
+# canto lido errado (186 -> 136) mas a linha azul confirmou: aceita
+dm = Dominio(tem_2554=False, menu="saidas"); dm.canto_lido = "136"
+print("canto errado + linha certa:", sai.executar_empresa(dm, "186", False)); assert dm.gerados
+# canto lido errado e a linha NÃO confirmou: pula
+dm = Dominio(tem_2554=False, menu="saidas"); dm.canto_lido = "136"; dm.lista_mostra = "1?6"
+try:
+    sai.executar_empresa(dm, "186", False); raise SystemExit("deveria pular")
+except Exception as e:
+    assert type(e).__name__ == "Pular", e; print("canto errado sem linha: pulou")
 print("ok: fluxos das rotinas")

@@ -61,6 +61,9 @@ jobs:
       - name: Teste do OCR em telas do Domínio
         run: python tests/test_ocr_real.py
 
+      - name: Teste do menu pelo texto (tela real)
+        run: python tests/test_menu_real.py
+
       - name: Teste do OCR (Python)
         run: |
           python main.py --testar-ocr

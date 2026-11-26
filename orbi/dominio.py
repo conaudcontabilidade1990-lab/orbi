@@ -60,6 +60,27 @@ def fechar_janelas_abertas(t):
     raise Parar("Há uma janela aberta no Domínio que não consegui fechar. Feche-a e rode de novo.")
 
 
+def _digitos_canto(t):
+    """Primeiro número lido na área do código (o mês/ano vem depois, na linha de baixo)."""
+    m = re.search(r"\d+", t.ler("empresa_codigo", fator=4, binarizar=True, borda=12))
+    return m.group(0) if m else ""
+
+
+def _confirmado_pela_linha(t, linha_ok, antes, codigo):
+    """O OCR do canto às vezes troca um dígito (186 lido como 136). Se a linha azul já tinha
+    confirmado o código pelo desenho, aceita quando a Troca fechou e o código do canto mudou
+    para um número do mesmo tamanho."""
+    if not linha_ok:
+        return False
+    if "troca de empresa" in t.ler("troca_titulo"):
+        return False
+    depois = _digitos_canto(t)
+    if depois and depois != antes and len(depois) == len(codigo):
+        t.log(f"  empresa {codigo}: confirmada pela linha selecionada (o canto foi lido como '{depois}')")
+        return True
+    return False
+
+
 def trocar_empresa(t, codigo):
     fechar_janelas_abertas(t)
     if empresa_ativa_e(t, codigo):
@@ -96,8 +117,11 @@ def trocar_empresa(t, codigo):
         t.clicar("troca_fechar", espera=0.5)
         raise Pular(f"O código {codigo} não está na lista de empresas do Domínio (a busca caiu na {lido}). "
                     "Pode estar inativo ou não ser deste módulo. Não acessei nenhuma empresa.")
+    linha_ok = lido == codigo                    # a linha azul confirmou o código pelo desenho
+    antes = _digitos_canto(t)
     t.clicar("troca_acessar", espera=0.5)
-    if not t.aguardar(lambda: empresa_ativa_e(t, codigo), espera, intervalo=0.4):
+    if not t.aguardar(lambda: empresa_ativa_e(t, codigo), espera, intervalo=0.4) \
+            and not _confirmado_pela_linha(t, linha_ok, antes, codigo):
         raise Pular(f"A empresa ativa não ficou {codigo} (lido no canto: '{t.ler('empresa_ativa')}' / "
                     f"'{t.ler('empresa_codigo', fator=4, binarizar=True, borda=12)}'). "
                     "O código pode não existir, estar inativo ou não ser deste módulo no Domínio. "
@@ -110,12 +134,47 @@ def janela_maximizada(t, palavra_titulo):
     return "gerar parcelas" in titulo and palavra_titulo in titulo
 
 
+def _so_letras(n):
+    return re.sub(r"[^a-z ]", "", n).strip()
+
+
+# Itens de menu reconhecidos pelo TEXTO (o menu Utilitários muda de empresa para empresa;
+# clicar por posição já abriu a janela errada). O OCR às vezes troca "ç" por "g".
+ITEM_FINAL = {
+    "entradas": lambda n: _so_letras(n) in ("entradas", "entrada"),
+    "saidas": lambda n: _so_letras(n) in ("saidas", "saida"),
+    "servicos": lambda n: _so_letras(n) in ("servicos", "servigos", "servios", "servicos"),
+}
+
+
+def _menu(t, aceita, regiao, nome):
+    achado = t.aguardar(lambda: t.achar_linha(aceita, regiao), 3, intervalo=0.3)
+    if not achado:
+        for _ in range(3):
+            t.teclas("esc")
+        raise Parar(f"Não encontrei o item '{nome}' no menu do Domínio. Fechei o menu sem clicar em nada.")
+    x, y, _ = achado
+    t.clicar_em(x, y, espera=0.5)
+    return x, y
+
+
 def abrir_gerar_parcelas(t, ponto_menu, palavra_titulo):
-    """Utilitários > Parcelas > Gerar Parcelas > (Entradas/Saídas/Serviços), maximizada."""
+    """Utilitários > Parcelas > Gerar Parcelas > (Entradas/Saídas/Serviços), achando cada item pelo texto."""
     t.clicar("menu_utilitarios", espera=0.5)
-    t.clicar("menu_parcelas", espera=0.5)
-    t.clicar("menu_gerar", espera=0.5)
-    t.clicar(ponto_menu, espera=0.3)
+    navegar_menu_parcelas(t, palavra_titulo)
+    _depois_do_menu(t, palavra_titulo)
+
+
+def navegar_menu_parcelas(t, palavra_titulo):
+    W, H = t.cfg["resolucao"]
+    ux = t.P["menu_utilitarios"][0]
+    x1, _ = _menu(t, lambda n: _so_letras(n) == "parcelas", (ux - 10, 0, 420, H - 40), "Parcelas")
+    x2, _ = _menu(t, lambda n: "gerar parcelas" in n, (x1 + 60, 0, min(420, W - x1 - 60), H - 40), "Gerar Parcelas")
+    _menu(t, ITEM_FINAL[palavra_titulo], (x2 + 40, 0, max(200, W - x2 - 40), H - 40),
+          {"saidas": "Saídas", "servicos": "Serviços", "entradas": "Entradas"}[palavra_titulo])
+
+
+def _depois_do_menu(t, palavra_titulo):
     if t.aguardar(lambda: janela_maximizada(t, palavra_titulo), 4):
         return
     x, y = t.P["titulo_janela_normal"]

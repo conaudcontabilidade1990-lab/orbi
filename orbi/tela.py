@@ -301,6 +301,21 @@ class Tela:
                 return int(x0 + x + lw / 2), int(y0 + y + lh / 2)
         return None
 
+    def achar_linha(self, aceita, regiao):
+        """(x, y, texto) do centro da primeira linha de texto em que aceita(texto_normalizado) é True."""
+        self.checar()
+        x0, y0, w, h = regiao
+        for texto, x, y, lw, lh in ocr_linhas(pyautogui.screenshot(region=(x0, y0, w, h)), self.cfg["idioma_ocr"]):
+            n = norm(texto)
+            if aceita(n):
+                return int(x0 + x + lw / 2), int(y0 + y + lh / 2), n
+        return None
+
+    def clicar_em(self, x, y, espera=None):
+        self.checar()
+        pyautogui.click(x, y)
+        self.dormir(self.T["pausa"] if espera is None else espera)
+
     def aguardar(self, condicao, timeout, intervalo=0.25):
         """Repete a conferência até dar certo ou acabar o tempo (segue assim que a tela muda)."""
         fim = time.time() + timeout
