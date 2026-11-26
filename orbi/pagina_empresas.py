@@ -27,6 +27,7 @@ def estilo_tabela(escuro):
     st.configure("Orbi.Treeview.Heading", background=cor("trilho", escuro), foreground=texto,
                  relief="flat", font=("Segoe UI Semibold", 10), padding=(6, 5))
     st.map("Orbi.Treeview", background=[("selected", cor("azul", escuro))], foreground=[("selected", "#ffffff")])
+    st.layout("Orbi.Treeview", [("Orbi.Treeview.treearea", {"sticky": "nswe"})])   # sem a borda branca
     st.map("Orbi.Treeview.Heading", background=[("active", cor("borda", escuro))])
 
 
@@ -66,8 +67,10 @@ class PaginaEmpresas:
         fl = ctk.CTkFrame(esq, fg_color="transparent")
         fl.pack(fill="x", padx=14, pady=(14, 6))
         self.var_busca = tk.StringVar()
-        e = ctk.CTkEntry(fl, textvariable=self.var_busca, placeholder_text="Buscar por código, nome, CNPJ ou IE",
-                         height=34, corner_radius=10, font=F(12), fg_color=COR["caixa"], border_color=COR["borda"])
+        ctk.CTkLabel(fl, text="BUSCAR (código, razão social, fantasia, CNPJ ou IE)", font=F(10, "bold"),
+                     text_color=COR["suave"], anchor="w").pack(fill="x")
+        e = ctk.CTkEntry(fl, textvariable=self.var_busca, height=34, corner_radius=10, font=F(12),
+                         fg_color=COR["caixa"], border_color=COR["borda"], text_color=COR["texto"])
         e.pack(fill="x")
         self.var_busca.trace_add("write", lambda *x: self._agendar_filtro())
         grade = ctk.CTkFrame(fl, fg_color="transparent")
@@ -87,14 +90,14 @@ class PaginaEmpresas:
 
         acoes = ctk.CTkFrame(esq, fg_color="transparent")
         acoes.pack(fill="x", padx=14, pady=(4, 6))
-        self.lbl_conta = ctk.CTkLabel(acoes, text="", font=F(12, "bold"), text_color=COR["texto"])
-        self.lbl_conta.pack(side="left")
         ctk.CTkButton(acoes, text="Limpar filtros", height=30, width=110, corner_radius=8, font=F(11),
                       fg_color="transparent", border_width=1, border_color=COR["borda"], text_color=COR["texto"],
                       hover_color=COR["trilho"], command=self.limpar).pack(side="right")
-        ctk.CTkButton(acoes, text="Tirar marcadas do filtro", height=30, width=160, corner_radius=8, font=F(11),
+        ctk.CTkButton(acoes, text="Tirar marcadas", height=30, width=118, corner_radius=8, font=F(11),
                       fg_color="transparent", border_width=1, border_color=COR["borda"], text_color=COR["texto"],
                       hover_color=COR["trilho"], command=self._excluir_marcadas).pack(side="right", padx=6)
+        self.lbl_conta = ctk.CTkLabel(acoes, text="", font=F(12, "bold"), text_color=COR["texto"], anchor="w")
+        self.lbl_conta.pack(side="left", fill="x", expand=True)
 
         caixa = ctk.CTkFrame(esq, fg_color="transparent")
         caixa.pack(fill="both", expand=True, padx=14, pady=(0, 14))
@@ -104,7 +107,9 @@ class PaginaEmpresas:
             self.tabela.heading(chave, text=titulo, anchor=anc if anc != "e" else "e")
             self.tabela.column(chave, width=larg, anchor=anc, stretch=chave == "nome")
         sb = ctk.CTkScrollbar(caixa, command=self.tabela.yview)
-        self.tabela.configure(yscrollcommand=sb.set)
+        sbh = ctk.CTkScrollbar(caixa, orientation="horizontal", command=self.tabela.xview)
+        self.tabela.configure(yscrollcommand=sb.set, xscrollcommand=sbh.set)
+        sbh.pack(side="bottom", fill="x")
         sb.pack(side="right", fill="y")
         self.tabela.pack(side="left", fill="both", expand=True)
         self.tabela.tag_configure("inativa", foreground="#9aa6b8")

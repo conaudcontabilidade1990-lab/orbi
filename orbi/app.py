@@ -470,7 +470,7 @@ class App:
             usa = bool(r and r.usa_competencia)
             for en in self.ent_comp:
                 en.configure(state="normal" if usa else "disabled")
-            self.lbl_comp.configure(text="" if usa else "esta rotina não usa competência")
+            self.lbl_comp.configure(text="" if usa else "(não usada)")
 
     @staticmethod
     def _competencia_padrao():
