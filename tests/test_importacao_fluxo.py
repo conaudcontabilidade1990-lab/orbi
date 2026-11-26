@@ -131,7 +131,7 @@ class Dom:
             return 1 if self.so_erros else 13
         return 1
 
-    def palavras(self, regiao):
+    def palavras(self, regiao, contraste=False):
         x0, y0 = regiao[0], regiao[1]
         if y0 == RX[1] + imp.RES_ABAS[1]:
             return [("registros", 430, 230, 60, 14, 0), ("advertencias", 580, 230, 70, 14, 0), ("erros", 650, 230, 30, 14, 0)]

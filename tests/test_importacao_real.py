@@ -63,7 +63,7 @@ print("resumo:", t.botoes_fechar("area_janelas"), [imp._titulo_da_janela(t, b) f
 rx, ry = imp._janela(t, "resum")
 ax, ay, aw, ah = imp.RES_ABAS
 abas = (max(0, rx + ax), ry + ay, aw, ah)
-pal = t.palavras(abas)
+pal = t.palavras(abas, contraste=True)
 print("abas:", [(p[0], t.escuros_em(*imp._centro(p))) for p in pal])
 reg = next(p for p in pal if p[0].startswith("registro"))
 err = next(p for p in pal if p[0].startswith("erro"))
@@ -72,7 +72,7 @@ gx, gy, gw, gh = imp.RES_GRADE
 linhas = [tx for tx, *_ in t.linhas((max(0, rx + gx), ry + gy, gw, gh))]
 print("grade:", linhas)
 assert imp.numeros_com_erro(linhas) == {44267}, linhas
-grav = next((p for p in t.palavras(imp._regiao_botoes(t, rx, ry)) if p[0].startswith("grav")), None)
+grav = next((p for p in t.palavras(imp._regiao_botoes(t, rx, ry), contraste=True) if p[0].startswith("grav")), None)
 print("gravar:", grav, grav and t.escuros_em(*imp._centro(grav)))
 assert grav is None or t.escuros_em(*imp._centro(grav)) < 6
 print("ok: menu e telas de importação reconhecidos")

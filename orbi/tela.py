@@ -125,9 +125,9 @@ def ocr_linhas(img, idioma="pt-BR"):
     return linhas
 
 
-def ocr_palavras(img, idioma="pt-BR"):
+def ocr_palavras(img, idioma="pt-BR", contraste=False):
     """[(texto, x, y, largura, altura, nº da linha)] de cada palavra, em pixels da imagem original."""
-    res, f, _ = _reconhecer(img, idioma, True)
+    res, f, _ = _reconhecer(img, idioma, True, contraste=contraste)
     out = []
     for i, ln in enumerate(res.lines):
         for w in ln.words:
@@ -407,12 +407,14 @@ class Tela:
         return [(norm(tx), x0 + x, y0 + y, lw, lh)
                 for tx, x, y, lw, lh in ocr_linhas(pyautogui.screenshot(region=(x0, y0, w, h)), self.cfg["idioma_ocr"])]
 
-    def palavras(self, regiao):
-        """[(palavra normalizada, x, y, largura, altura, nº da linha)] da região (coordenadas de tela)."""
+    def palavras(self, regiao, contraste=False):
+        """[(palavra normalizada, x, y, largura, altura, nº da linha)] da região (coordenadas de tela).
+        contraste=True também lê texto cinza (botões e abas desabilitados)."""
         self.checar()
         x0, y0, w, h = self.regiao(regiao)
+        img = pyautogui.screenshot(region=(x0, y0, w, h))
         return [(norm(tx), x0 + x, y0 + y, lw, lh, i)
-                for tx, x, y, lw, lh, i in ocr_palavras(pyautogui.screenshot(region=(x0, y0, w, h)), self.cfg["idioma_ocr"])]
+                for tx, x, y, lw, lh, i in ocr_palavras(img, self.cfg["idioma_ocr"], contraste)]
 
     def imagem(self, regiao):
         self.checar()

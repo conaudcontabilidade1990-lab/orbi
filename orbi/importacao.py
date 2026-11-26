@@ -50,7 +50,7 @@ DX_IMPORTAR, DY_IMPORTAR = -44, 45
 DX_FECHAR, DY_FECHAR = -44, 109
 DX_PASTA, DY_PASTA = -135, 58
 # Resumo dos Dados (a partir do [X] dele): faixa das abas e área dos botões de baixo
-RES_ABAS = (-790, 52, 770, 32)
+RES_ABAS = (-790, 35, 770, 50)
 RES_BOTOES = (-810, 200, 805, 560)
 RES_GRADE = (-760, 65, 740, 310)
 
@@ -213,7 +213,7 @@ def marcar_opcao(t, xis, nome, aceita):
 
 
 def _palavra(t, regiao, aceita, mais_a_direita=False):
-    achadas = [p for p in t.palavras(regiao) if aceita(p[0])]
+    achadas = [p for p in t.palavras(regiao, contraste=True) if aceita(p[0])]
     if not achadas:
         return None
     return max(achadas, key=lambda p: p[1]) if mais_a_direita else achadas[0]
@@ -295,7 +295,7 @@ def importar_e_gravar(t, xis, simular, log, numeros_erro=None):
         numeros_erro.update(_ler_erros(t, rx, ry, erros))
         t.aviso(f"a importação teve ERROS ({len(numeros_erro)} documento(s)); esses não são gravados")
 
-    botoes = t.palavras(_regiao_botoes(t, rx, ry))
+    botoes = t.palavras(_regiao_botoes(t, rx, ry), contraste=True)
     cancelar = next((p for p in botoes if p[0].startswith("cancel")), None)
     if simular:
         if not cancelar:
