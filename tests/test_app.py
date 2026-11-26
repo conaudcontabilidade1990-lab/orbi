@@ -109,6 +109,36 @@ a.borda.esconder()
 root.deiconify()
 root.destroy()
 
+# página Empresas e escolha por seleção salva (dados de exemplo, sem portal)
+from orbi import portal as portalmod  # noqa: E402
+EXEMPLO = [portalmod.normalizar_empresa(c) for c in [
+    {"id": "a", "codigo": "611", "legalName": "EMPRESA EXEMPLO UM LTDA", "cnpj": "11.111.111/0001-11", "stateRegistration": "111.111.111.111",
+     "regime": "Simples Nacional", "anexo": "III", "state": "SP", "city": "Porto Ferreira", "active": True, "responsavelConaud": "Ana"},
+    {"id": "b", "codigo": "12", "legalName": "EMPRESA EXEMPLO DOIS S.A.", "cnpj": "22.222.222/0001-22", "regime": "Lucro Presumido",
+     "state": "SP", "city": "Descalvado", "active": True, "responsavelConaud": "Bruno"},
+    {"id": "c", "codigo": "", "legalName": "EMPRESA SEM CODIGO", "cnpj": "33.333.333/0001-33", "regime": "Simples Nacional",
+     "state": "MG", "city": "Uberaba", "active": True},
+    {"id": "d", "codigo": "5", "legalName": "EMPRESA INATIVA", "regime": "Simples Nacional", "state": "SP", "city": "Pirassununga", "active": False}]]
+ctk.set_appearance_mode("light")
+root, a = abrir()
+a.carregar_empresas = lambda: None        # sem portal no teste: dados de exemplo
+a._login_ok(conta.Usuario("u5", "leo@conaud", "Leonardo", "admin", None))
+a.empresas, a.empresas_quando = EXEMPLO, "2026-11-26T09:40:00"
+a._selecoes_chegaram([{"id": "s1", "nome": "Simples Nacional", "filtros": {"regime": ["Simples Nacional"], "situacao": "ativas"}}], "")
+a.mostrar("empresas"); esperar(root, 0.8)
+a.pag_emp.atualizar(); esperar(root, 0.5)
+assert len(a.pag_emp.tabela.get_children()) == 3, a.pag_emp.tabela.get_children()   # ativas
+a.pag_emp._mudou("regime", "Simples Nacional"); esperar(root, 0.3)
+assert len(a.pag_emp.tabela.get_children()) == 2
+foto(root, "5_empresas_claro")
+a.mostrar("executar"); esperar(root, 0.5)
+a.var_fonte.set("Seleção salva"); a._mostrar_fonte(); a.var_sel.set("Simples Nacional"); a._resumo_empresas()
+esperar(root, 0.3)
+assert a._empresas_escolhidas() == [("611", "EMPRESA EXEMPLO UM LTDA")], a._empresas_escolhidas()
+foto(root, "6_executar_selecao_claro")
+assert a._ler_competencia("03/2026") == (2026, 3) and a._ler_competencia("13/2026") is None
+root.destroy()
+
 # botão Iniciar pelo caminho real (Domínio simulado) + navegação Painel -> Executar
 from orbi import tela as telamod  # noqa: E402
 from orbi.rotinas import ROTINAS  # noqa: E402

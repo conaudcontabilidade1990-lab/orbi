@@ -70,6 +70,10 @@ PADRAO = {
     "ultimas_empresas": "",
     "ultimo_email": "",
     "lembrar": True,
+    "fonte_empresas": "Códigos",
+    "ultima_selecao": "",
+    "comp_ini": "",
+    "comp_fim": "",
     "tema": "claro",
 }
 
@@ -83,7 +87,7 @@ def _mesclar(base, extra):
     return base
 
 
-PREFERENCIAS = ("ultima_rotina", "ultimas_empresas", "ultimo_email", "lembrar", "tema")
+PREFERENCIAS = ("ultima_rotina", "ultimas_empresas", "ultimo_email", "lembrar", "tema", "fonte_empresas", "ultima_selecao", "comp_ini", "comp_fim")
 
 
 def _diferenca(atual, base):

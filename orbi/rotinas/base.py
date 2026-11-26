@@ -15,6 +15,8 @@ class Rotina:
     descricao = ""
     pede_empresas = True          # mostra o campo de códigos de empresa
     precisa_regioes = ()          # regiões que precisam estar calibradas para rodar de verdade
+    usa_competencia = False       # mostra "competência de/até" na tela; vem em self.competencia
+    competencia = None            # ((ano, mês) inicial, (ano, mês) final) quando usa_competencia
 
     def executar_empresa(self, t, codigo, simular):
         """Executa a rotina para uma empresa e devolve o texto do resultado.

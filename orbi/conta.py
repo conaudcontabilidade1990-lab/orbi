@@ -41,6 +41,16 @@ class Usuario:
     role: str
     acessos: list | None = field(default=None)
     refresh_token: str = field(default="", repr=False)
+    id_token: str = field(default="", repr=False)
+    token_em: float = field(default=0.0, repr=False)
+
+    def token(self):
+        """Token válido para ler/gravar no portal (renova sozinho a cada ~50 min)."""
+        import time as _t
+        if not self.id_token or _t.time() - self.token_em > 50 * 60:
+            self.id_token, self.refresh_token = novo_token(self.refresh_token)
+            self.token_em = _t.time()
+        return self.id_token
 
     @property
     def admin(self):
@@ -128,6 +138,15 @@ def renovar(email, refresh_token):
     return _perfil(r["user_id"], r["id_token"], email, r.get("refresh_token", refresh_token))
 
 
+def novo_token(refresh_token):
+    req = urllib.request.Request(
+        f"https://securetoken.googleapis.com/v1/token?key={API_KEY}",
+        data=urllib.parse.urlencode({"grant_type": "refresh_token", "refresh_token": refresh_token}).encode(),
+        method="POST", headers={"Content-Type": "application/x-www-form-urlencoded"})
+    r = _abrir(req)
+    return r["id_token"], r.get("refresh_token", refresh_token)
+
+
 def _perfil(uid, token, email, refresh_token):
     req = urllib.request.Request(
         f"https://firestore.googleapis.com/v1/projects/{PROJETO}/databases/(default)/documents/users/{uid}",
@@ -146,5 +165,7 @@ def _perfil(uid, token, email, refresh_token):
     if role not in PERFIS_PERMITIDOS:
         raise ErroLogin("Este tipo de conta não pode usar o Orbi.")
     acessos = campos.get("acessos")
+    import time as _t
     return Usuario(uid=uid, email=email, nome=campos.get("name") or email, role=role,
-                   acessos=acessos if isinstance(acessos, list) else None, refresh_token=refresh_token)
+                   acessos=acessos if isinstance(acessos, list) else None, refresh_token=refresh_token,
+                   id_token=token, token_em=_t.time())

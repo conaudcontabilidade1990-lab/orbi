@@ -22,7 +22,7 @@ except Exception:
 import customtkinter as ctk
 from PIL import Image
 
-from . import VERSAO, atualizacao, conta, estatisticas, sessao
+from . import VERSAO, atualizacao, conta, estatisticas, portal, sessao
 from . import config as cfgmod
 from .borda import Borda
 from .graficos import COR, Anel, Barras, contar, cor
@@ -60,6 +60,10 @@ class App:
         self.paginas = {}
         self.pagina_atual = None
         self.borda = Borda(root)
+        self._fonte = fonte
+        self.empresas, self.empresas_quando = portal.empresas_guardadas()
+        self.selecoes, self.selecoes_erro = [], ""
+        self.pag_emp = None
 
         ctk.set_appearance_mode({"escuro": "dark", "claro": "light"}.get(self.cfg.get("tema"), "light"))
         root.title(f"Orbi — Robô da Conaud Contabilidade · v{VERSAO}")
@@ -230,6 +234,7 @@ class App:
         self.cfg["lembrar"] = bool(lembrar)
         cfgmod.salvar(self.cfg)
         self._tela_principal()
+        self.carregar_empresas()
 
     def _sair(self):
         if self.rodando:
@@ -259,7 +264,7 @@ class App:
                      text_color=COR["suave"], justify="left").pack(anchor="w")
 
         self.nav = {}
-        itens = [("executar", "▶   Executar"), ("painel", "▦   Painel")]
+        itens = [("executar", "▶   Executar"), ("empresas", "▤   Empresas"), ("painel", "▦   Painel")]
         if self.usuario.admin:
             itens.append(("calibrar", "⚙   Calibrar"))
         for chave, texto in itens:
@@ -370,11 +375,44 @@ class App:
                                      justify="left", wraplength=520)
         self.lbl_desc.pack(fill="x", pady=(2, 12))
         f.bind("<Configure>", lambda e: self.lbl_desc.configure(wraplength=max(200, e.width - 10)))
-        rotulo("EMPRESAS (códigos separados por espaço, vírgula ou linha)")
-        self.txt_emp = ctk.CTkTextbox(f, height=70, corner_radius=10, font=("Consolas", 13), border_width=1,
+        cab = ctk.CTkFrame(f, fg_color="transparent")
+        cab.pack(fill="x")
+        ctk.CTkLabel(cab, text="EMPRESAS", font=fonte(12, "bold"), text_color=COR["suave"]).pack(side="left")
+        self.var_fonte = tk.StringVar(value=self.cfg.get("fonte_empresas", "Códigos"))
+        ctk.CTkSegmentedButton(cab, values=["Códigos", "Seleção salva"], variable=self.var_fonte, height=28,
+                               font=fonte(11), selected_color=COR["azul"], selected_hover_color=COR["azul_hover"],
+                               command=lambda v: self._mostrar_fonte()).pack(side="right")
+        self.box_fonte = ctk.CTkFrame(f, fg_color="transparent")
+        self.box_fonte.pack(fill="x", pady=(4, 2))
+        self.txt_emp = ctk.CTkTextbox(self.box_fonte, height=58, corner_radius=10, font=("Consolas", 13), border_width=1,
                                       border_color=COR["borda"], fg_color=COR["caixa"], text_color=COR["texto"])
-        self.txt_emp.pack(fill="x", pady=(4, 12))
         self.txt_emp.insert("1.0", self.cfg.get("ultimas_empresas", ""))
+        self.txt_emp.bind("<KeyRelease>", lambda e: self._resumo_empresas())
+        self.var_sel = tk.StringVar(value=self.cfg.get("ultima_selecao", ""))
+        self.om_sel = ctk.CTkOptionMenu(self.box_fonte, variable=self.var_sel, values=["(nenhuma seleção salva)"],
+                                        command=lambda v: self._resumo_empresas(), height=38, corner_radius=10,
+                                        font=fonte(13), dropdown_font=fonte(13), dynamic_resizing=False,
+                                        fg_color=COR["caixa"], text_color=COR["texto"], button_color=COR["borda"],
+                                        button_hover_color=COR["trilho"])
+        self.lbl_emp = ctk.CTkLabel(f, text="", font=fonte(11), text_color=COR["suave"], anchor="w",
+                                    justify="left", wraplength=520)
+        self.lbl_emp.pack(fill="x", pady=(0, 8))
+
+        self.fr_comp = ctk.CTkFrame(f, fg_color="transparent")
+        self.fr_comp.pack(fill="x", pady=(0, 10))
+        ctk.CTkLabel(self.fr_comp, text="COMPETÊNCIA", font=fonte(12, "bold"), text_color=COR["suave"]).pack(side="left")
+        ini, fim = self._competencia_padrao()
+        self.var_comp_ini = tk.StringVar(value=self.cfg.get("comp_ini") or ini)
+        self.var_comp_fim = tk.StringVar(value=self.cfg.get("comp_fim") or fim)
+        self.ent_comp = []
+        for rot_txt, var in (("de", self.var_comp_ini), ("até", self.var_comp_fim)):
+            ctk.CTkLabel(self.fr_comp, text=rot_txt, font=fonte(12), text_color=COR["texto"]).pack(side="left", padx=(12, 4))
+            en = ctk.CTkEntry(self.fr_comp, textvariable=var, width=86, height=32, corner_radius=8, font=fonte(13),
+                              fg_color=COR["caixa"], border_color=COR["borda"], placeholder_text="MM/AAAA")
+            en.pack(side="left")
+            self.ent_comp.append(en)
+        self.lbl_comp = ctk.CTkLabel(self.fr_comp, text="", font=fonte(11), text_color=COR["suave"])
+        self.lbl_comp.pack(side="left", padx=10)
 
         acoes = ctk.CTkFrame(f, fg_color="transparent")
         acoes.pack(fill="x")
@@ -414,6 +452,8 @@ class App:
                      text_color=COR["suave"], justify="center").pack(side="bottom", pady=14)
         self._tema_graficos()
         self._filtrar_rotinas(manter=ultima.nome)
+        self._mostrar_fonte()
+        self._atualizar_fonte()
         return pg
 
     def _filtrar_rotinas(self, manter=None):
@@ -426,9 +466,117 @@ class App:
     def _descricao(self):
         r = self._rotina()
         self.lbl_desc.configure(text=r.descricao if r else "")
+        if hasattr(self, "ent_comp"):
+            usa = bool(r and r.usa_competencia)
+            for en in self.ent_comp:
+                en.configure(state="normal" if usa else "disabled")
+            self.lbl_comp.configure(text="" if usa else "esta rotina não usa competência")
+
+    @staticmethod
+    def _competencia_padrao():
+        hoje = dt.date.today()
+        mes = (hoje.replace(day=1) - dt.timedelta(days=1))
+        txt = f"{mes.month:02d}/{mes.year}"
+        return txt, txt
+
+    @staticmethod
+    def _ler_competencia(txt):
+        m = re.fullmatch(r"\s*(\d{1,2})\s*/\s*(\d{4})\s*", txt or "")
+        if not m or not 1 <= int(m.group(1)) <= 12:
+            return None
+        return int(m.group(2)), int(m.group(1))
+
+    def _mostrar_fonte(self):
+        if self.var_fonte.get() == "Códigos":
+            self.om_sel.pack_forget()
+            self.txt_emp.pack(fill="x")
+        else:
+            self.txt_emp.pack_forget()
+            self.om_sel.pack(fill="x")
+        self._resumo_empresas()
+
+    def _atualizar_fonte(self):
+        if not hasattr(self, "om_sel") or not self.om_sel.winfo_exists():
+            return
+        nomes = [s.get("nome", "") for s in self.selecoes]
+        self.om_sel.configure(values=nomes or ["(nenhuma seleção salva)"])
+        if self.var_sel.get() not in nomes:
+            self.var_sel.set(nomes[0] if nomes else "(nenhuma seleção salva)")
+        self._resumo_empresas()
+
+    def _empresas_escolhidas(self):
+        """[(codigo, nome)] conforme a fonte escolhida; nome vazio se não estiver no cadastro."""
+        por_cod = {e["codigo"]: e for e in self.empresas if e["codigo"]}
+        if self.var_fonte.get() == "Códigos":
+            cods = [c for c in re.split(r"[\s,;]+", self.txt_emp.get("1.0", "end")) if c]
+            return [(c, por_cod.get(c, {}).get("nome", "")) for c in cods]
+        sel = next((s for s in self.selecoes if s.get("nome") == self.var_sel.get()), None)
+        if not sel:
+            return []
+        lista = portal.aplicar_filtros(self.empresas, sel.get("filtros") or {})
+        return [(e["codigo"], e["nome"]) for e in lista if e["codigo"]]
+
+    def _resumo_empresas(self):
+        if not hasattr(self, "lbl_emp") or not self.lbl_emp.winfo_exists():
+            return
+        if self.var_fonte.get() == "Seleção salva" and self.selecoes_erro:
+            self.lbl_emp.configure(text=self.selecoes_erro, text_color=COR["advertencia"])
+            return
+        esc = self._empresas_escolhidas()
+        if not esc:
+            self.lbl_emp.configure(text="Nenhuma empresa." if self.var_fonte.get() != "Códigos"
+                                   else "Digite os códigos do Domínio.", text_color=COR["suave"])
+            return
+        desconhecidos = [c for c, n in esc if not n]
+        nomes = ", ".join(f"{c} {n.split()[0] if n else '?'}" for c, n in esc[:6]) + ("…" if len(esc) > 6 else "")
+        aviso = f"  ·  {len(desconhecidos)} código(s) fora do cadastro do portal" if desconhecidos and self.empresas else ""
+        self.lbl_emp.configure(text=f"{len(esc)} empresa(s): {nomes}{aviso}",
+                               text_color=COR["advertencia"] if aviso else COR["suave"])
 
     def _rotina(self):
         return next((r for r in getattr(self, "rotinas", []) if r.nome == self.var_rotina.get()), None)
+
+    # ------------------------------ página Empresas ------------------------------
+    def _pagina_empresas(self):
+        from .pagina_empresas import PaginaEmpresas
+        self.pag_emp = PaginaEmpresas(self)
+        return self.pag_emp.pg
+
+    def carregar_empresas(self):
+        """Baixa empresas e seleções do portal em segundo plano (a cópia local já está em uso)."""
+        u = self.usuario
+        if not u:
+            return
+        if hasattr(self, "lbl_status") and self.lbl_status.winfo_exists():
+            self.lbl_status.configure(text="Atualizando empresas do portal…")
+
+        def trabalho():
+            try:
+                emp = portal.baixar_empresas(u)
+                self.fila.put(("empresas", (emp, portal.empresas_guardadas()[1])))
+            except Exception as e:
+                self.fila.put(("status", f"Empresas: usando a cópia guardada ({e})."))
+            try:
+                self.fila.put(("selecoes", (portal.listar_selecoes(u), "")))
+            except Exception as e:
+                msg = ("As seleções compartilhadas ainda não estão liberadas no portal (falta publicar a regra)."
+                       if "permiss" in str(e).lower() else f"Seleções indisponíveis: {e}")
+                self.fila.put(("selecoes", ([], msg)))
+        self._em_thread(trabalho)
+
+    def _empresas_chegaram(self, emp, quando):
+        self.empresas, self.empresas_quando = emp, quando
+        if hasattr(self, "lbl_status") and self.lbl_status.winfo_exists():
+            self.lbl_status.configure(text=f"{len(emp)} empresas carregadas do portal.")
+        if self.pag_emp and self.pag_emp.pg.winfo_exists():
+            self.pag_emp.atualizar()
+        self._atualizar_fonte()
+
+    def _selecoes_chegaram(self, lista, erro):
+        self.selecoes, self.selecoes_erro = lista, erro
+        if self.pag_emp and self.pag_emp.pg.winfo_exists():
+            self.pag_emp.desenhar_selecoes()
+        self._atualizar_fonte()
 
     # ------------------------------ página Painel ------------------------------
     def _pagina_painel(self):
@@ -533,6 +681,8 @@ class App:
 
     def _tema_graficos(self):
         fundo = cor("cartao", self.escuro)
+        if self.pag_emp and self.pag_emp.pg.winfo_exists():
+            self.pag_emp.tema()
         for g in (getattr(self, "anel", None), getattr(self, "barras", None)):
             try:
                 if g and g.c.winfo_exists():
@@ -561,6 +711,17 @@ class App:
                     self._contar_resultado(msg)
                 elif alvo == "fim":
                     self._fim()
+                elif alvo == "empresas":
+                    self._empresas_chegaram(*msg)
+                elif alvo == "selecoes":
+                    self._selecoes_chegaram(*msg)
+                elif alvo == "selecao_salva":
+                    if msg[0] and self.pag_emp:
+                        self.pag_emp.salvou(*msg)
+                    self.carregar_empresas()
+                elif alvo == "selecao_erro":
+                    if self.pag_emp:
+                        self.pag_emp.erro_salvar(msg)
                 elif alvo == "janela":
                     if msg == "minimizar":
                         self.root.iconify()
@@ -610,10 +771,20 @@ class App:
         if not rot or not self.usuario or rot.departamento not in self.usuario.departamentos():
             messagebox.showwarning("Orbi", "Escolha uma rotina liberada para o seu usuário.")
             return
-        empresas = [e for e in re.split(r"[\s,;]+", self.txt_emp.get("1.0", "end")) if e]
+        escolhidas = self._empresas_escolhidas()
+        empresas = [c for c, _ in escolhidas]
+        self.nomes_exec = dict(escolhidas)
         if rot.pede_empresas and not empresas:
-            messagebox.showwarning("Orbi", "Informe ao menos um código de empresa.")
+            messagebox.showwarning("Orbi", "Informe ao menos um código de empresa (ou escolha uma seleção com empresas).")
             return
+        competencia = None
+        if rot.usa_competencia:
+            ci, cf = self._ler_competencia(self.var_comp_ini.get()), self._ler_competencia(self.var_comp_fim.get())
+            if not ci or not cf or ci > cf:
+                messagebox.showwarning("Orbi", "Informe a competência inicial e final no formato MM/AAAA "
+                                               "(a inicial não pode ser depois da final).")
+                return
+            competencia = (ci, cf)
         if any(not e.isdigit() for e in empresas):
             messagebox.showwarning("Orbi", "Use só códigos numéricos de empresa.")
             return
@@ -622,12 +793,21 @@ class App:
         if not simular and faltam:
             messagebox.showwarning("Orbi", "Antes de gerar de verdade é preciso calibrar: " + ", ".join(faltam) + ".")
             return
+        origem = (f"seleção \"{self.var_sel.get()}\"" if self.var_fonte.get() == "Seleção salva" else "códigos digitados")
+        comp_txt = (f"\nCompetência: {competencia[0][1]:02d}/{competencia[0][0]} a {competencia[1][1]:02d}/{competencia[1][0]}"
+                    if competencia else "")
         if not simular and not messagebox.askyesno(
-                "Orbi", f"{rot.nome}\n{len(empresas)} empresa(s), GERAÇÃO REAL.\n\nIniciar?"):
+                "Orbi", f"{rot.nome}\n{len(empresas)} empresa(s) ({origem}), GERAÇÃO REAL.{comp_txt}\n\nIniciar?"):
             return
+        rot.competencia = competencia
 
         self.cfg["ultima_rotina"] = rot.id
-        self.cfg["ultimas_empresas"] = " ".join(empresas)
+        if self.var_fonte.get() == "Códigos":
+            self.cfg["ultimas_empresas"] = " ".join(empresas)
+        self.cfg["fonte_empresas"] = self.var_fonte.get()
+        self.cfg["ultima_selecao"] = self.var_sel.get()
+        if competencia:
+            self.cfg["comp_ini"], self.cfg["comp_fim"] = self.var_comp_ini.get().strip(), self.var_comp_fim.get().strip()
         cfgmod.salvar(self.cfg)
         self.parar.clear()
         self.rodando = True
@@ -683,6 +863,9 @@ class App:
         email = self.usuario.email
         self.log(f"=== {rot.nome} | {len(empresas)} empresa(s) | {'SIMULAÇÃO' if simular else 'GERAÇÃO REAL'}"
                  f" | usuário: {email}")
+        if rot.competencia:
+            (a1, m1), (a2, m2) = rot.competencia
+            self.log(f"Competência: {m1:02d}/{a1} a {m2:02d}/{a2}")
         self.log("Começando em 3 s — deixe o Escrita Fiscal aberto e não mexa no mouse.")
         self.fila.put(("janela", "minimizar"))
 
@@ -697,7 +880,8 @@ class App:
             t.dormir(3)
             t.conferir_resolucao()
             for i, cod in enumerate(empresas, 1):
-                self.log(f"Empresa {cod} ({i}/{len(empresas)})")
+                nome = getattr(self, "nomes_exec", {}).get(cod, "")
+                self.log(f"Empresa {cod}{' ' + nome if nome else ''} ({i}/{len(empresas)})")
                 self.fila.put(("progresso", (i, len(empresas), cod)))
                 t.avisos = []
                 try:
