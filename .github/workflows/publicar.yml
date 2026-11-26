@@ -61,6 +61,12 @@ jobs:
       - name: Teste do OCR em telas do Domínio
         run: python tests/test_ocr_real.py
 
+      - name: Teste do fluxo de importação (simulado)
+        run: python tests/test_importacao_fluxo.py
+
+      - name: Teste das telas de importação (tela real)
+        run: python tests/test_importacao_real.py
+
       - name: Teste da separação de XML
         run: python tests/test_xmls.py
 

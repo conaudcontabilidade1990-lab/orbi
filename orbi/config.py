@@ -23,10 +23,15 @@ PADRAO = {
         "troca": 8,             # espera a janela/lista da Troca de empresas atualizar             # espera a lista/mensagem após Buscar
         "confirmacao": 15,      # espera o "Você tem certeza..."
         "sucesso": 600,         # espera "Parcelas geradas com sucesso." (listas grandes)
+        "importacao": 1800,     # espera o Domínio carregar/gravar uma importação de XML
     },
+    "dominio_unidade": "M:",    # como o disco C: deste computador aparece no Domínio (GraphOn)
     "limiar_caixa": 6,          # pixels escuros no centro da caixa = marcada
     # Pontos de clique (x, y) em 1366x768
     "pontos": {
+        # Seleção de arquivos (Importação Padrão)
+        "sel_campo": [690, 218], "sel_atualizar": [415, 568], "sel_todos": [751, 507],
+        "sel_ok": [862, 568], "sel_cancelar": [947, 568],
         "titulo_app": [60, 12],
         "troca_empresa": [131, 93], "troca_por_codigo": [482, 199], "troca_busca": [603, 227],
         "troca_acessar": [703, 704], "troca_fechar": [875, 704], "troca_amostra_azul": [880, 300],
@@ -51,6 +56,9 @@ PADRAO = {
         "titulo_app": [0, 0, 700, 24],          # título do Domínio; com janela maximizada traz [Gerar Parcelas...]
         "mensagem": [250, 300, 866, 180],
         "area_janelas": [0, 130, 1290, 565],    # onde ficam as janelas internas soltas (procura o [X] vermelho)
+        "dlg_importacao": [250, 190, 866, 300],  # avisos da importação de XML
+        "sel_titulo": [356, 168, 420, 22], "sel_campo": [426, 208, 528, 20],
+        "sel_linha1": [452, 311, 495, 16], "sel_linha2": [452, 330, 495, 16],
         "empresa_ativa": [1150, 60, 216, 52],   # "NOME DA EMPRESA - 611" (normal ou com janela maximizada)
         "empresa_codigo": [1290, 60, 76, 52],   # só o "- 611" (o OCR às vezes pula o código na linha inteira)
         "troca_titulo": [433, 133, 250, 18],    # título "Troca de empresas"

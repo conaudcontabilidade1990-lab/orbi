@@ -123,6 +123,17 @@ def ocr_linhas(img, idioma="pt-BR"):
     return linhas
 
 
+def ocr_palavras(img, idioma="pt-BR"):
+    """[(texto, x, y, largura, altura, nº da linha)] de cada palavra, em pixels da imagem original."""
+    res, f, _ = _reconhecer(img, idioma, True)
+    out = []
+    for i, ln in enumerate(res.lines):
+        for w in ln.words:
+            r = w.bounding_rect
+            out.append((w.text, r.x / f, r.y / f, r.width / f, r.height / f, i))
+    return out
+
+
 def faixa_destacada(img, x):
     """(y0, y1) da faixa azul de seleção na coluna x da imagem; None se não houver."""
     rgb = img.convert("RGB")
@@ -235,6 +246,35 @@ def botoes_fechar(img):
             if brancos >= 4:
                 achados.append((cx, y))
     return [(cx, max(0, y - 6)) for cx, y in achados]
+
+
+def copiar(texto):
+    """Coloca texto na área de transferência do Windows (CF_UNICODETEXT)."""
+    import ctypes
+    from ctypes import wintypes
+    k32, u32 = ctypes.windll.kernel32, ctypes.windll.user32
+    k32.GlobalAlloc.restype = wintypes.HGLOBAL
+    k32.GlobalAlloc.argtypes = [wintypes.UINT, ctypes.c_size_t]
+    k32.GlobalLock.restype = wintypes.LPVOID
+    k32.GlobalLock.argtypes = [wintypes.HGLOBAL]
+    k32.GlobalUnlock.argtypes = [wintypes.HGLOBAL]
+    u32.SetClipboardData.argtypes = [wintypes.UINT, wintypes.HANDLE]
+    dados = (texto + "\0").encode("utf-16-le")
+    for _ in range(10):
+        if u32.OpenClipboard(None):
+            break
+        time.sleep(0.05)
+    else:
+        raise RuntimeError("Não consegui abrir a área de transferência do Windows.")
+    try:
+        u32.EmptyClipboard()
+        h = k32.GlobalAlloc(0x0002, len(dados))
+        ptr = k32.GlobalLock(h)
+        ctypes.memmove(ptr, dados, len(dados))
+        k32.GlobalUnlock(h)
+        u32.SetClipboardData(13, h)
+    finally:
+        u32.CloseClipboard()
 
 
 class Tela:
@@ -354,6 +394,33 @@ class Tela:
         self.checar()
         x0, y0, w, h = self.regiao(regiao)
         return [(x0 + x, y0 + y) for x, y in botoes_fechar(pyautogui.screenshot(region=(x0, y0, w, h)))]
+
+    def linhas(self, regiao):
+        """[(texto normalizado, x, y, largura, altura)] das linhas de texto da região (coordenadas de tela)."""
+        self.checar()
+        x0, y0, w, h = self.regiao(regiao)
+        return [(norm(tx), x0 + x, y0 + y, lw, lh)
+                for tx, x, y, lw, lh in ocr_linhas(pyautogui.screenshot(region=(x0, y0, w, h)), self.cfg["idioma_ocr"])]
+
+    def palavras(self, regiao):
+        """[(palavra normalizada, x, y, largura, altura, nº da linha)] da região (coordenadas de tela)."""
+        self.checar()
+        x0, y0, w, h = self.regiao(regiao)
+        return [(norm(tx), x0 + x, y0 + y, lw, lh, i)
+                for tx, x, y, lw, lh, i in ocr_palavras(pyautogui.screenshot(region=(x0, y0, w, h)), self.cfg["idioma_ocr"])]
+
+    def escuros_em(self, x, y):
+        img = ImageOps.grayscale(pyautogui.screenshot(region=(int(x) - 4, int(y) - 4, 9, 9)))
+        return sum(1 for p in img.getdata() if p < 100)
+
+    def colar(self, texto, espera=1.0):
+        """Cola um texto (aceita acentos) pela área de transferência. O Domínio roda remoto (GraphOn) e
+        a área de transferência demora a sincronizar: grava, espera, e só então Ctrl+V."""
+        self.checar()
+        copiar(texto)
+        self.dormir(espera)
+        pyautogui.hotkey("ctrl", "v")
+        self.dormir(0.4)
 
     def clicar_em(self, x, y, espera=None):
         self.checar()

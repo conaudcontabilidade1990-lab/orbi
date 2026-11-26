@@ -1,5 +1,6 @@
 """Separar e zipar os XML do HubStrom por tipo (NF-e, NFC-e, CT-e, NFS-e), empresa por empresa.
 Não mexe no Domínio: só lê e grava arquivos no computador."""
+import re
 from pathlib import Path
 
 from .. import xmls
@@ -84,3 +85,64 @@ class MarcarImportados(SepararXml):
                 marc = xmls.marcar_importados(pasta_mes)
             partes.append(f"{m:02d}/{a}: " + (xmls.resumo(marc) if marc else "nenhum zip pendente"))
         return ("seria marcado (simulação)" if simular else "marcados como importados") + " — " + "; ".join(partes)
+
+
+class ImportarXml(SepararXml):
+    """Separa/zipa o que falta importar e importa cada tipo no Domínio (Importação Padrão)."""
+    id = "importar_xml"
+    nome = "Importar XML do HubStrom no Domínio"
+    descricao = ("Para cada empresa e mês: separa os XML por tipo, zipa só o que ainda não foi importado e importa "
+                 "no Domínio (NF-e e NFC-e: Todos; CT-e: entradas e canceladas; NFS-e: tomado, prestado e "
+                 "canceladas), marcando Todos nas advertências e gravando. O que foi gravado fica marcado como "
+                 "importado. Em simulação vai até o Resumo dos Dados e cancela.")
+    usa_dominio = True
+    precisa_regioes = ("sel_campo", "dlg_importacao")
+
+    def _no_dominio(self, t, caminho):
+        """C:\\... deste computador -> unidade que o Domínio enxerga (padrão M:)."""
+        p = str(caminho)
+        if not re.match(r"^[cC]:\\", p):
+            from ..tela import Parar
+            raise Parar(f"A pasta dos XML precisa estar no disco C: deste computador (está em '{p}').")
+        return t.cfg.get("dominio_unidade", "M:") + p[2:]
+
+    def executar_empresa(self, t, codigo, simular):
+        from .. import dominio as d
+        from .. import importacao as imp
+        from ..tela import Parar
+        base = Path(self.pasta_base or "")
+        if not base.is_dir():
+            raise Parar(f"A pasta dos XML não existe: '{base}'. Ajuste em 'Pasta dos XML'.")
+        emp = xmls.pasta_da_empresa(base, codigo)
+        if not emp:
+            t.aviso("sem pasta da empresa")
+            return f"não há pasta '{codigo}-…' em {base}"
+        partes, trocou = [], False
+        for a, m in self.meses():
+            t.checar()
+            mmaaaa = f"{m:02d}{a}"
+            pasta_mes = emp / mmaaaa
+            if not pasta_mes.is_dir():
+                t.aviso(f"sem pasta {mmaaaa}")
+                partes.append(f"{m:02d}/{a}: sem pasta")
+                continue
+            cont = xmls.separar(pasta_mes, gravar=True)
+            if cont.get(xmls.OUTROS):
+                t.aviso(f"{cont[xmls.OUTROS][0]} XML não reconhecido(s) em {m:02d}/{a}")
+            tipos = [tp for tp in xmls.TIPOS if cont.get(tp) and cont[tp][1] and (pasta_mes / tp / f"{tp}.zip").exists()]
+            if not tipos:
+                partes.append(f"{m:02d}/{a}: nada novo para importar")
+                continue
+            if not trocou:
+                d.trazer_para_frente(t)
+                d.trocar_empresa(t, codigo)
+                trocou = True
+            feitos = []
+            for tp in tipos:
+                t.log(f"  {m:02d}/{a} · {tp}: importando {cont[tp][1]} XML…")
+                res = imp.importar_tipo(t, tp, self._no_dominio(t, pasta_mes / tp), f"{mmaaaa}\\{tp}", simular)
+                if not simular:
+                    xmls.marcar_importados(pasta_mes, [tp])
+                feitos.append(f"{tp} ({cont[tp][1]}): " + " | ".join(res))
+            partes.append(f"{m:02d}/{a}: " + "; ".join(feitos))
+        return ("simulação — " if simular else "importado — ") + " / ".join(partes)
