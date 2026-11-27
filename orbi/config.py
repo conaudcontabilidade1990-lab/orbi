@@ -88,6 +88,7 @@ PADRAO = {
     "comp_fim": "",
     "apelido_pc": "",
     "pasta_xml": "",
+    "pasta_central": r"Z:\Orbi\ocorrencias",   # cópia dos registros/fotos de todos os computadores
     "periodo_ini": "", "periodo_fim": "",              # pasta base do HubStrom (vazio = Área de Trabalho\Configuração HubStrom)
     "bandeja": True,
     "iniciar_windows": False,
@@ -104,7 +105,7 @@ def _mesclar(base, extra):
     return base
 
 
-PREFERENCIAS = ("ultima_rotina", "ultimas_empresas", "ultimo_email", "lembrar", "tema", "fonte_empresas", "ultima_selecao", "comp_ini", "comp_fim", "apelido_pc", "pasta_xml", "periodo_ini", "periodo_fim", "bandeja", "iniciar_windows")
+PREFERENCIAS = ("ultima_rotina", "ultimas_empresas", "ultimo_email", "lembrar", "tema", "fonte_empresas", "ultima_selecao", "comp_ini", "comp_fim", "apelido_pc", "pasta_xml", "pasta_central", "periodo_ini", "periodo_fim", "bandeja", "iniciar_windows")
 
 
 def _diferenca(atual, base):

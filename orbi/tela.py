@@ -544,4 +544,6 @@ class Tela:
     def foto(self, nome):
         caminho = cfgmod.PASTA_LOGS / f"{dt.datetime.now():%Y%m%d_%H%M%S}_{nome}.png"
         pyautogui.screenshot(str(caminho))
+        from . import central
+        central.copiar(caminho)
         return caminho

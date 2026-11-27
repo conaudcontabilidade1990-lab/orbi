@@ -22,7 +22,7 @@ except Exception:
 import customtkinter as ctk
 from PIL import Image
 
-from . import VERSAO, agenda, atualizacao, conta, estatisticas, portal, sessao
+from . import central, VERSAO, agenda, atualizacao, conta, estatisticas, portal, sessao
 from . import config as cfgmod
 from .borda import Borda
 from .graficos import COR, Anel, Barras, contar, cor
@@ -90,6 +90,7 @@ class App:
         if self.cfg.get("_erro_config"):
             self.log(f"Aviso: config.json com erro, usando padrão ({self.cfg['_erro_config']}).")
         atualizacao.limpar_antigo()
+        central.iniciar(self.cfg)
         if self.cfg.get("iniciar_windows") and atualizacao.eh_executavel():
             try:   # o Orbi pode ter mudado de pasta (instalado pelo servidor): atualiza o atalho de início
                 self.definir_iniciar_windows(True)
@@ -1036,6 +1037,7 @@ class App:
                 arq.write(msg + "\n")
         except OSError:
             pass
+        central.linha(f"orbi_{dt.date.today():%Y%m%d}.log", msg)
 
     def _abrir(self, caminho, criar=False):
         if criar:
@@ -1259,6 +1261,7 @@ class App:
         try:
             rel.write_text(f"{rot.nome} — {'simulação' if simular else 'geração real'} — usuário: {email}\n"
                            + "\n".join(linhas), encoding="utf-8")
+            central.copiar(rel)
         except OSError:
             pass
         self.log("===== RELATÓRIO =====")
