@@ -153,6 +153,7 @@ class BaixarParcelas(Rotina):
         t.clicar_em(*_r(xis, L_PAGAR), espera=1.0)
         # com muitas parcelas o Domínio demora para montar a tela de baixa: espera (até 30 min)
         bx, esperado = None, 0
+        inicio_pagar = __import__("time").time()
         while not bx and esperado < 1800:
             bx = t.aguardar(lambda: imp._janela(t, "baixa de"), 30, intervalo=0.5)
             esperado += 30
@@ -164,8 +165,12 @@ class BaixarParcelas(Rotina):
         if not bx:
             raise Parar(f"A tela 'Baixa de Parcelas' não abriu em 30 min depois do {self.botao}.")
 
+        abrir_s = __import__("time").time() - inicio_pagar
+        # quanto mais parcelas, mais demora: o tempo que a tela levou para abrir dá a medida.
+        # Com totais zerados/diferentes, só desiste depois de max(10 min, 3x esse tempo) sem mudança.
+        paciencia = int(max(600, 3 * abrir_s))
         t.clicar_em(*_r(bx, B_GERAR), espera=1.5)
-        t.log("  gerando os lançamentos contábeis... (pode demorar)")
+        t.log(f"  gerando os lançamentos contábeis... (pode demorar; espero até {paciencia // 60} min sem mudança)")
         # espera o Domínio terminar: totais iguais por 3 leituras seguidas, sem 'aguarde' na tela
         limite, iguais, ultimo, esperado = 3 * 3600, 0, None, 0
         while esperado < limite:
@@ -179,8 +184,8 @@ class BaixarParcelas(Rotina):
             ultimo = atual
             deb, cred = atual
             pronto = deb is not None and cred is not None and deb == cred and deb > 0
-            # pronto: débito = crédito estável; zerado/diferente: só desiste depois de 3 min sem mudar nada
-            if (pronto and iguais >= 2) or (iguais >= 90):
+            # pronto: débito = crédito estável; zerado/diferente: só desiste depois da 'paciencia' sem mudar nada
+            if (pronto and iguais >= 2) or (iguais * 2 >= paciencia):
                 break
             if esperado % 300 == 0:
                 t.log(f"  ainda gerando... {esperado // 60} min")
