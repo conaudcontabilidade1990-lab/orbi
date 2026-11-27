@@ -9,3 +9,4 @@ winrt-Windows.Media.Ocr>=2.0
 winrt-Windows.Storage.Streams>=2.0
 customtkinter==5.2.2
 pystray==0.19.5
+certifi>=2024.2

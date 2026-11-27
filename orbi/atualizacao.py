@@ -9,6 +9,7 @@ import time
 import os
 import subprocess
 import sys
+import urllib.error
 import urllib.request
 from pathlib import Path
 
@@ -38,6 +39,20 @@ def limpar_antigo():
                 pass
 
 
+def _abrir_url(req, timeout):
+    """urlopen que tolera computador sem o certificado raiz no Windows: tenta o padrão e, se o certificado
+    não for reconhecido, usa a lista de certificados que vai junto com o Orbi (certifi)."""
+    import ssl
+    try:
+        return urllib.request.urlopen(req, timeout=timeout)
+    except urllib.error.URLError as e:
+        if not isinstance(getattr(e, "reason", None), ssl.SSLCertVerificationError):
+            raise
+        import certifi
+        ctx = ssl.create_default_context(cafile=certifi.where())
+        return urllib.request.urlopen(req, timeout=timeout, context=ctx)
+
+
 def verificar():
     """Retorna (versao, url) se houver versão mais nova; senão None."""
     if not REPO_GITHUB:
@@ -45,7 +60,7 @@ def verificar():
     req = urllib.request.Request(
         f"https://api.github.com/repos/{REPO_GITHUB}/releases/latest",
         headers={"Accept": "application/vnd.github+json", "User-Agent": "Orbi"})
-    with urllib.request.urlopen(req, timeout=15) as r:
+    with _abrir_url(req, 15) as r:
         dados = json.load(r)
     nova = dados.get("tag_name", "")
     if _tupla(nova) <= _tupla(VERSAO):
@@ -65,7 +80,7 @@ def aplicar(url, progresso=lambda txt: None):
     antigo = exe.with_suffix(".old")
     progresso("baixando...")
     req = urllib.request.Request(url, headers={"User-Agent": "Orbi"})
-    with urllib.request.urlopen(req, timeout=120) as r, open(novo, "wb") as f:
+    with _abrir_url(req, 120) as r, open(novo, "wb") as f:
         while bloco := r.read(1 << 16):
             f.write(bloco)
     if novo.stat().st_size < 1_000_000:

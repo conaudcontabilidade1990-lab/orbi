@@ -91,7 +91,7 @@ jobs:
       - name: Montar Orbi.exe
         run: >
           pyinstaller --noconfirm --onefile --windowed --name Orbi --icon orbi.ico
-          --collect-all winrt --collect-all customtkinter --collect-all pystray --add-data "orbi.ico;." --add-data "orbi/recursos;orbi/recursos" --hidden-import _overlapped --hidden-import asyncio main.py
+          --collect-all winrt --collect-all customtkinter --collect-all pystray --collect-data certifi --add-data "orbi.ico;." --add-data "orbi/recursos;orbi/recursos" --hidden-import _overlapped --hidden-import asyncio main.py
 
       - name: Teste do OCR (Orbi.exe)
         run: |

@@ -24,7 +24,7 @@ MENU_BAIXAS = ["entradas", "saidas", "servicos", "cupons fiscais", "rescisao de 
 
 # a partir do [X] da janela "Parcelas a Pagar/Receber"
 L_DATA_INI, L_DATA_FIM = (-750, 60), (-618, 60)
-L_LER_INI, L_LER_FIM = (-758, 51, 66, 18), (-625, 51, 66, 18)
+L_LER_INI, L_LER_FIM = (-760, 49, 70, 22), (-627, 49, 70, 22)
 L_RADIO_PERIODO, L_RADIO_ABERTA = (-839, 60), (-482, 59)
 L_BUSCAR, L_LER_BUSCAR = (-187, 462), (-213, 452, 70, 20)
 L_TODOS, L_PAGAR, L_FECHAR = (-804, 462), (-55, 47), (-55, 111)
@@ -97,13 +97,18 @@ class BaixarParcelas(Rotina):
 
     def _data(self, t, xis, clique, regiao, data, nome):
         alvo = data.strftime("%d/%m/%Y")
+        lido = ""
         for _ in range(2):
             t.clicar_em(*_r(xis, clique), espera=0.2)
             t.teclas("home")
-            t.digitar(data.strftime("%d%m%Y"), espera=0.4)
-            if data_confere(t.ler(_r(xis, regiao)), data):
-                return
-        raise Parar(f"Não consegui preencher a data {nome} com {alvo} (lido: '{t.ler(_r(xis, regiao))}').")
+            t.digitar(data.strftime("%d%m%Y"), espera=0.3)
+            t.teclas("tab")                      # sai do campo: o cursor atrapalhava a leitura
+            t.dormir(0.4)
+            for fator, binar in ((3, False), (4, True), (5, False)):
+                lido = t.ler(_r(xis, regiao), fator=fator, binarizar=binar)
+                if data_confere(lido, data):
+                    return
+        raise Parar(f"Não consegui preencher a data {nome} com {alvo} (lido: '{lido}').")
 
     def _marcar(self, t, xis, off, nome):
         x, y = _r(xis, off)
