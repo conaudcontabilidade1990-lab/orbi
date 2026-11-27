@@ -44,6 +44,13 @@ def valor(txt):
     return float(m.group(0).replace(".", "").replace(" ", "").replace(",", ".")) if m else None
 
 
+def data_confere(txt, data):
+    """O OCR às vezes lê a barra '/' como 1, l ou |: aceita '01110/2026' para 01/10/2026."""
+    sep = r"[/1l|i!\\]"
+    padrao = rf"{data:%d}{sep}{data:%m}{sep}{data:%Y}"
+    return re.search(padrao, (txt or "").replace(" ", "")) is not None
+
+
 def periodo_da_competencia(comp):
     (a1, m1), (a2, m2) = comp
     return dt.date(a1, m1, 1), dt.date(a2, m2, calendar.monthrange(a2, m2)[1])
@@ -81,7 +88,7 @@ class BaixarParcelas(Rotina):
             t.clicar_em(*_r(xis, clique), espera=0.2)
             t.teclas("home")
             t.digitar(data.strftime("%d%m%Y"), espera=0.4)
-            if alvo in t.ler(_r(xis, regiao), digitos=False).replace(" ", ""):
+            if data_confere(t.ler(_r(xis, regiao)), data):
                 return
         raise Parar(f"Não consegui preencher a data {nome} com {alvo} (lido: '{t.ler(_r(xis, regiao))}').")
 
