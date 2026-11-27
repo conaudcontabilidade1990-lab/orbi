@@ -713,6 +713,10 @@ class App:
     def _relogio(self):
         """A cada 30 s: sinal de vida, agenda atualizada e agendamentos deste computador na hora."""
         try:
+            # computadores dedicados ficam dias na bandeja: procura versão nova a cada 30 min (parado)
+            if not self.rodando and time.time() - getattr(self, "_ultima_checagem_atualizacao", 0) > 1800:
+                self._ultima_checagem_atualizacao = time.time()
+                threading.Thread(target=self._checar_atualizacao, daemon=True).start()
             if self.usuario:
                 agora_s = time.time()
                 if agora_s - self._ultimo_sinal > 300:
@@ -1287,9 +1291,24 @@ class App:
 
     # ------------------------------ atualização ------------------------------
     def _checar_atualizacao(self):
+        if getattr(self, "_checando_atualizacao", False):
+            return
+        self._checando_atualizacao = True
+        self._ultima_checagem_atualizacao = time.time()
+        try:
+            self._checar_atualizacao_()
+        finally:
+            self._checando_atualizacao = False
+
+    def _checar_atualizacao_(self):
         try:
             achou = atualizacao.verificar()
-        except Exception:
+            atualizacao.ERRO = ""
+        except Exception as e:
+            msg = f"{type(e).__name__}: {e}"[:200]
+            if msg != atualizacao.ERRO:            # registra uma vez por erro diferente
+                self.log(f"Não consegui verificar se há versão nova: {msg}")
+            atualizacao.ERRO = msg
             return
         if not achou:
             return
@@ -1303,6 +1322,7 @@ class App:
         try:
             atualizacao.aplicar(url, lambda m: self.fila.put(("status", f"Atualização: {m}")))
         except Exception as e:
+            atualizacao.ERRO = f"ao aplicar {versao}: {type(e).__name__}: {e}"[:200]
             self.log(f"Não foi possível atualizar agora: {e}")
 
     def _fechar(self):

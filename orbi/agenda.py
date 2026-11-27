@@ -62,12 +62,21 @@ def _quando(ts):
 
 
 # ---------------------------- computadores ----------------------------
+def _erro_atualizacao():
+    try:
+        from . import atualizacao
+        return atualizacao.ERRO or ""
+    except Exception:
+        return ""
+
+
 def sinal(usuario, apelido=""):
     nome = este_computador()
     _pedir(usuario, "POST", COMMIT, {"writes": [{
         "update": {"name": f"{RAIZ}/orbiComputadores/{nome}", "fields": {
             "nome": para_valor(nome), "apelido": para_valor((apelido or "")[:60]),
             "versao": para_valor(VERSAO), "usuario": para_valor(usuario.nome[:80]),
+            "erroAtualizacao": para_valor(_erro_atualizacao()),
             "usuarioUid": para_valor(usuario.uid)}},
         "updateTransforms": [{"fieldPath": "ultimoSinal", "setToServerValue": "REQUEST_TIME"}]}]})
 

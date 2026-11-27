@@ -15,6 +15,7 @@ from pathlib import Path
 from . import REPO_GITHUB, VERSAO
 
 NOME_ASSET = "Orbi.exe"
+ERRO = ""          # último erro ao verificar/aplicar atualização (vai no sinal do computador)
 
 
 def _tupla(v):
@@ -125,8 +126,9 @@ def instalar_se_no_servidor():
     destino = local / "Orbi.exe"
     copiar = True
     if destino.exists():
+        # o local se atualiza sozinho; só troca se o do servidor tiver sido colocado depois (mais novo)
         try:
-            copiar = destino.stat().st_size != exe.stat().st_size
+            copiar = exe.stat().st_mtime > destino.stat().st_mtime + 60
         except OSError:
             pass
     if copiar:
