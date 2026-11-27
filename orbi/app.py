@@ -440,6 +440,19 @@ class App:
                      fg_color=COR["caixa"], border_color=COR["borda"]).pack(side="left", fill="x", expand=True, padx=(12, 6))
         ctk.CTkButton(self.fr_pasta, text="…", width=36, height=32, corner_radius=8, fg_color=COR["borda"],
                       hover_color=COR["trilho"], text_color=COR["texto"], command=self._escolher_pasta_xml).pack(side="left")
+
+        self.fr_periodo = ctk.CTkFrame(f, fg_color="transparent")
+        ctk.CTkLabel(self.fr_periodo, text="PERÍODO", font=fonte(12, "bold"), text_color=COR["suave"]).pack(side="left")
+        hoje = dt.date.today()
+        ini_padrao = (hoje.replace(day=1) - dt.timedelta(days=1)).replace(day=1)
+        fim_padrao = hoje.replace(day=1) - dt.timedelta(days=1)
+        self.var_per_ini = tk.StringVar(value=self.cfg.get("periodo_ini") or ini_padrao.strftime("%d/%m/%Y"))
+        self.var_per_fim = tk.StringVar(value=self.cfg.get("periodo_fim") or fim_padrao.strftime("%d/%m/%Y"))
+        for txt, var in (("de", self.var_per_ini), ("até", self.var_per_fim)):
+            ctk.CTkLabel(self.fr_periodo, text=txt, font=fonte(12), text_color=COR["suave"]).pack(side="left", padx=(12, 6))
+            ctk.CTkEntry(self.fr_periodo, textvariable=var, width=110, height=32, corner_radius=8, font=fonte(12),
+                         fg_color=COR["caixa"], border_color=COR["borda"]).pack(side="left")
+        ctk.CTkLabel(self.fr_periodo, text="dd/mm/aaaa", font=fonte(11), text_color=COR["suave"]).pack(side="left", padx=10)
         self._acoes_antes = None
 
         acoes = ctk.CTkFrame(f, fg_color="transparent")
@@ -501,6 +514,10 @@ class App:
                 en.configure(state="normal" if usa else "disabled")
             self.lbl_comp.configure(text="" if usa else "(não usada)")
         if getattr(self, "_acoes_antes", None) is not None:
+            if r and getattr(r, "usa_periodo", False):
+                self.fr_periodo.pack(fill="x", pady=(0, 10), before=self._acoes_antes)
+            else:
+                self.fr_periodo.pack_forget()
             if r and r.usa_pasta_xml:
                 self.fr_pasta.pack(fill="x", pady=(0, 10), before=self._acoes_antes)
             else:
@@ -785,6 +802,8 @@ class App:
         rot.competencia = agenda.competencia_de(ag.get("competencia")) if rot.usa_competencia else None
         if rot.usa_pasta_xml:
             rot.pasta_base = self.cfg.get("pasta_xml") or self._pasta_xml_padrao()
+        if getattr(rot, "usa_periodo", False):
+            rot.periodo = None                     # na Agenda, o período é o da competência (meses inteiros)
         self.nomes_exec = nomes
         self.agendamento_atual = ag
         self.mostrar("executar")
@@ -1052,6 +1071,18 @@ class App:
                                                "(a inicial não pode ser depois da final).")
                 return
             competencia = (ci, cf)
+        if getattr(rot, "usa_periodo", False):
+            try:
+                ini = dt.datetime.strptime(self.var_per_ini.get().strip(), "%d/%m/%Y").date()
+                fim = dt.datetime.strptime(self.var_per_fim.get().strip(), "%d/%m/%Y").date()
+            except ValueError:
+                messagebox.showwarning("Orbi", "Período inválido. Use dd/mm/aaaa, por exemplo 01/10/2026 e 31/10/2026.")
+                return
+            if fim < ini:
+                messagebox.showwarning("Orbi", "A data final do período é antes da inicial.")
+                return
+            rot.periodo = (ini, fim)
+            self.cfg["periodo_ini"], self.cfg["periodo_fim"] = self.var_per_ini.get().strip(), self.var_per_fim.get().strip()
         if rot.usa_pasta_xml:
             pasta = self.var_pasta_xml.get().strip()
             if not Path(pasta).is_dir():

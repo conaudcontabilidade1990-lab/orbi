@@ -38,7 +38,7 @@ PADRAO = {
         "troca_empresa": [131, 93], "troca_por_codigo": [482, 199], "troca_busca": [603, 227],
         "troca_acessar": [703, 704], "troca_fechar": [875, 704], "troca_amostra_azul": [880, 300],
         "troca_codigo_x": [470, 548],
-        "menu_utilitarios": [495, 53], "menu_parcelas": [583, 441], "menu_gerar": [917, 443],
+        "menu_utilitarios": [495, 53], "menu_movimentos": [316, 53], "menu_parcelas": [583, 441], "menu_gerar": [917, 443],
         "menu_entradas": [1055, 445], "menu_saidas": [1050, 468], "menu_servicos": [1053, 490],
         "titulo_janela_normal": [500, 217],   # duplo clique maximiza a janela Gerar Parcelas
         # janela maximizada
@@ -87,7 +87,8 @@ PADRAO = {
     "comp_ini": "",
     "comp_fim": "",
     "apelido_pc": "",
-    "pasta_xml": "",              # pasta base do HubStrom (vazio = Área de Trabalho\Configuração HubStrom)
+    "pasta_xml": "",
+    "periodo_ini": "", "periodo_fim": "",              # pasta base do HubStrom (vazio = Área de Trabalho\Configuração HubStrom)
     "bandeja": True,
     "iniciar_windows": False,
     "tema": "claro",
@@ -103,7 +104,7 @@ def _mesclar(base, extra):
     return base
 
 
-PREFERENCIAS = ("ultima_rotina", "ultimas_empresas", "ultimo_email", "lembrar", "tema", "fonte_empresas", "ultima_selecao", "comp_ini", "comp_fim", "apelido_pc", "pasta_xml", "bandeja", "iniciar_windows")
+PREFERENCIAS = ("ultima_rotina", "ultimas_empresas", "ultimo_email", "lembrar", "tema", "fonte_empresas", "ultima_selecao", "comp_ini", "comp_fim", "apelido_pc", "pasta_xml", "periodo_ini", "periodo_fim", "bandeja", "iniciar_windows")
 
 
 def _diferenca(atual, base):
