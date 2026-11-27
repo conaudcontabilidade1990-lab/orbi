@@ -209,7 +209,11 @@ ITEM_FINAL = {k: _item_parecido(k) for k in ("entradas", "saidas", "servicos")}
 
 
 def _menu(t, aceita, regiao, nome):
-    achado = t.aguardar(lambda: t.achar_linha(aceita, regiao), 3, intervalo=0.3)
+    """Acha o item do menu pelo texto: primeiro na região esperada e, se não achar, na tela toda
+    (o menu abre em lugares diferentes conforme o computador/empresa)."""
+    W, H = t.cfg["resolucao"]
+    toda = (0, 0, W, H - 40)
+    achado = t.aguardar(lambda: t.achar_linha(aceita, regiao) or t.achar_linha(aceita, toda), 3, intervalo=0.3)
     if not achado:
         for _ in range(3):
             t.teclas("esc")
@@ -229,7 +233,7 @@ def abrir_gerar_parcelas(t, ponto_menu, palavra_titulo):
 def navegar_menu_parcelas(t, palavra_titulo):
     W, H = t.cfg["resolucao"]
     ux = t.P["menu_utilitarios"][0]
-    x1, _ = _menu(t, lambda n: _so_letras(n) == "parcelas", (ux - 10, 0, 420, H - 40), "Parcelas")
+    x1, _ = _menu(t, lambda n: _so_letras(n) == "parcelas", (max(0, ux - 200), 0, 650, H - 40), "Parcelas")
     x2, _ = _menu(t, lambda n: "gerar parcelas" in n, (x1 + 60, 0, min(420, W - x1 - 60), H - 40), "Gerar Parcelas")
     _menu(t, ITEM_FINAL[palavra_titulo], (x2 + 40, 0, max(200, W - x2 - 40), H - 40),
           {"saidas": "Saídas", "servicos": "Serviços", "entradas": "Entradas"}[palavra_titulo])
