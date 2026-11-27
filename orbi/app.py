@@ -733,6 +733,9 @@ class App:
     def _relogio(self):
         """A cada 30 s: sinal de vida, agenda atualizada e agendamentos deste computador na hora."""
         try:
+            if central.ERRO and central.ERRO != getattr(self, "_erro_central_mostrado", ""):
+                self._erro_central_mostrado = central.ERRO
+                self.log(f"Cópia dos registros no servidor não funcionou: {central.ERRO}")
             # computadores dedicados ficam dias na bandeja: procura versão nova a cada 30 min (parado)
             if not self.rodando and time.time() - getattr(self, "_ultima_checagem_atualizacao", 0) > 1800:
                 self._ultima_checagem_atualizacao = time.time()

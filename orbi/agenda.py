@@ -62,6 +62,14 @@ def _quando(ts):
 
 
 # ---------------------------- computadores ----------------------------
+def _erro_central():
+    try:
+        from . import central
+        return central.ERRO or ""
+    except Exception:
+        return ""
+
+
 def _erro_atualizacao():
     try:
         from . import atualizacao
@@ -77,6 +85,7 @@ def sinal(usuario, apelido=""):
             "nome": para_valor(nome), "apelido": para_valor((apelido or "")[:60]),
             "versao": para_valor(VERSAO), "usuario": para_valor(usuario.nome[:80]),
             "erroAtualizacao": para_valor(_erro_atualizacao()),
+            "erroCentral": para_valor(_erro_central()),
             "usuarioUid": para_valor(usuario.uid)}},
         "updateTransforms": [{"fieldPath": "ultimoSinal", "setToServerValue": "REQUEST_TIME"}]}]})
 

@@ -91,6 +91,10 @@ class PaginaAgenda:
             ctk.CTkLabel(l, text=f"{agenda.rotulo_computador(c)}\n{'ligado' if c['online'] else 'visto ' + visto} · "
                          f"v{c.get('versao', '?')}", font=F(11), text_color=COR["texto"], justify="left",
                          anchor="w").pack(side="left", fill="x", pady=6)
+            if c.get("erroCentral"):
+                ctk.CTkLabel(self.lista_pcs, text=f"  ⚠ sem cópia no servidor: {c['erroCentral'][:120]}", font=F(10),
+                             text_color=COR["advertencia"], wraplength=230, justify="left",
+                             anchor="w").pack(fill="x", padx=8)
             if c.get("erroAtualizacao"):
                 ctk.CTkLabel(self.lista_pcs, text=f"  ⚠ não atualiza: {c['erroAtualizacao'][:120]}", font=F(10),
                              text_color=COR["advertencia"], wraplength=230, justify="left",
