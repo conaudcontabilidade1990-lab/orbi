@@ -47,7 +47,9 @@ print("baixa X:", bx)
 assert bx and abs(bx[0] - 1070) <= 6
 print("  totais:", t.ler(b._r(bx, b.B_DEBITO)), "|", t.ler(b._r(bx, b.B_CREDITO)))
 assert b.valor(t.ler(b._r(bx, b.B_DEBITO))) == 0.76 and b.valor(t.ler(b._r(bx, b.B_CREDITO))) == 0.76
-for nome, off, pref in (("gerar", b.B_GERAR, "gera"), ("gravar", b.B_GRAVAR, "grav"), ("cancelar", b.B_CANCELAR, "cancel")):
+x, y = b._r(bx, b.B_GERAR)
+print("  rodapé:", [p[0] for p in t.palavras((x - 220, y - 14, 320, 28), contraste=True)])
+for nome, off, pref in (("gerar", b.B_GERAR, ("ge", "ga")), ("gravar", b.B_GRAVAR, "grav"), ("cancelar", b.B_CANCELAR, "cancel")):
     achou = palavra_perto(b._r(bx, off), pref)
     print("  ", nome, achou)
     assert achou, nome
