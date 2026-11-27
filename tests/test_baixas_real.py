@@ -31,7 +31,7 @@ for arq, botao in (("baixas_saidas_vazia.png", "receb"), ("baixas_entradas_vazia
     assert b.data_confere(ini, dt.date(2026, 10, 1)) and b.data_confere(fim, dt.date(2026, 10, 31)), (ini, fim)
     assert not b.data_confere(ini, dt.date(2026, 11, 1))
     for nome, off, pref in (("buscar", b.L_BUSCAR, "busc"), ("pagar/receber", b.L_PAGAR, botao),
-                            ("fechar", b.L_FECHAR, "fech"), ("todos", b.L_TODOS, "todo")):
+                            ("fechar", b.L_FECHAR, "fech")):   # "Todos" fica cinza com a lista vazia
         achou = palavra_perto(b._r(xis, off), pref)
         print("  ", nome, achou)
         assert achou, nome
