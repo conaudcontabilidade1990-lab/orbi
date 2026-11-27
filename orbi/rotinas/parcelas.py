@@ -29,7 +29,9 @@ class GerarParcelas(Rotina):
     # ---- passos ----
     def _buscar(self, t):
         d.garantir_caixa(t, "caixa_sem_parcelas", True)
-        rotulo = t.ler("botao_buscar")
+        # logo depois de abrir, a janela pode estar ainda se desenhando (botões vazios): espera até 20 s
+        rotulo = t.aguardar(lambda: (lambda r: r if "buscar" in r else "")(t.ler("botao_buscar")), 20, intervalo=0.5)
+        rotulo = rotulo or t.ler("botao_buscar")
         if "buscar" not in rotulo:
             raise Parar(f"O botão Buscar não está disponível (lido: '{rotulo}').")
         t.clicar("buscar", espera=0.2)
@@ -214,8 +216,11 @@ class GerarParcelasEntradas(GerarParcelas):
     def _busca_2554(self, t):
         self._caixas(t)
         t.clicar("busca_avancada", espera=0.2)
-        if t.esperar("ba_titulo", {"ok": ["busca avan"]}, 6, intervalo=0.25) != "ok":
-            raise Parar("A janela Busca avançada não abriu.")
+        if t.esperar("ba_titulo", {"ok": ["busca avan"]}, 15, intervalo=0.3) != "ok":
+            t.log("  a Busca avançada não abriu; clicando de novo")
+            t.clicar("busca_avancada", espera=0.3)
+            if t.esperar("ba_titulo", {"ok": ["busca avan"]}, 20, intervalo=0.3) != "ok":
+                raise Parar("A janela Busca avançada não abriu.")
         t.clicar("ba_coluna", espera=0.4)
         t.digitar("a", espera=0.6)               # "Acumulador" é a única coluna com A
         t.clicar("ba_valor", triplo=True, espera=0.3)

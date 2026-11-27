@@ -258,15 +258,39 @@ def _menu(t, aceita, regiao, nome):
 
 def abrir_gerar_parcelas(t, ponto_menu, palavra_titulo):
     """Utilitários > Parcelas > Gerar Parcelas > (Entradas/Saídas/Serviços), achando cada item pelo texto."""
+    aberta = lambda: janela_maximizada(t, palavra_titulo) or t.botoes_fechar("area_janelas")  # noqa: E731
     for tentativa in range(2):
-        t.clicar("menu_utilitarios", espera=0.5)
-        navegar_menu_parcelas(t, palavra_titulo)
-        # em empresa grande a janela demora a aparecer: espera até 20 s por ela (maximizada ou solta)
-        if t.aguardar(lambda: janela_maximizada(t, palavra_titulo) or t.botoes_fechar("area_janelas"), 20,
-                      intervalo=0.5):
+        try:
+            t.clicar("menu_utilitarios", espera=0.5)
+            navegar_menu_parcelas(t, palavra_titulo)
+        except Pular:
+            raise
+        except Parar as e:
+            if tentativa == 0 and aberta():      # a janela atrasada abriu enquanto o menu era refeito
+                break
+            if tentativa == 1:
+                raise Pular(f"{e} (2ª tentativa de abrir a janela Gerar Parcelas). Nada foi feito nesta empresa.")
+            t.log(f"  menu não respondeu ({e}); tentando de novo")
+            t.dormir(2)
+            continue
+        # em empresa grande a janela demora a aparecer: espera até 45 s (mais enquanto o Domínio trabalha)
+        fim = time.time() + 45
+        ok = False
+        while True:
+            if aberta():
+                ok = True
+                break
+            if time.time() >= fim and not t.ocupado():
+                break
+            if time.time() >= fim + 240:
+                break
+            t.dormir(0.5)
+        if ok:
             break
         if tentativa == 0:
             t.log("  a janela Gerar Parcelas não apareceu; abrindo pelo menu de novo")
+        else:
+            raise Pular("A janela Gerar Parcelas não abriu nem na 2ª tentativa. Nada foi feito nesta empresa.")
     _depois_do_menu(t, palavra_titulo)
 
 
