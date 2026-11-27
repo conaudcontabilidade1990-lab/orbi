@@ -126,9 +126,13 @@ class BaixarParcelas(Rotina):
 
     # ---- por empresa ----
     def executar_empresa(self, t, codigo, simular):
-        ini, fim = self.periodo or periodo_da_competencia(self.competencia)
         d.trazer_para_frente(t)
         d.trocar_empresa(t, codigo)
+        return self.baixar(t, codigo, simular)
+
+    def baixar(self, t, codigo, simular):
+        """A baixa em si, com a empresa já ativa."""
+        ini, fim = self.periodo or periodo_da_competencia(self.competencia)
         xis = self._abrir(t)
         self._marcar(t, xis, L_RADIO_PERIODO, self.radio_periodo)
         self._data(t, xis, L_DATA_INI, L_LER_INI, ini, "inicial")
@@ -216,3 +220,35 @@ class BaixarParcelas(Rotina):
             raise Parar("Depois de gravar, a tela 'Baixa de Parcelas' continuou aberta. Parei para conferir.")
         self._fechar_lista(t, xis)
         return f"baixado e gravado — débito = crédito = {deb:.2f}"
+
+
+TIPOS_BAIXA = (
+    ("entradas", "Pagar", "Entrada", "Entradas"),
+    ("saidas", "Receber", "Emissão", "Saídas"),
+    ("servicos", "Receber", "Emissão", "Serviços"),
+)
+
+
+class BaixarParcelasTodas(BaixarParcelas):
+    """Entradas, Saídas e Serviços numa rodada só: troca de empresa uma vez e faz as três baixas."""
+
+    def __init__(self):
+        super().__init__("baixas_todas", "Baixar parcelas — Entradas, Saídas e Serviços", "entradas",
+                         "Pagar", "Pagar", "Entrada")
+        self.descricao = ("Para cada empresa (trocando uma vez só): baixa de Entradas, depois Saídas, depois "
+                          "Serviços — período de/até, situação aberta/parcial, Buscar, Todos, Pagar/Receber, "
+                          "Gerar e, se débito = crédito, Gravar (senão cancela aquele tipo e segue). "
+                          "Em simulação vai até o Gerar e cancela.")
+
+    def executar_empresa(self, t, codigo, simular):
+        d.trazer_para_frente(t)
+        d.trocar_empresa(t, codigo)
+        partes = []
+        for item, botao, radio, rotulo in TIPOS_BAIXA:
+            r = BaixarParcelas(f"baixas_{item}", rotulo, item, botao, botao, radio)
+            r.periodo, r.competencia = self.periodo, self.competencia
+            t.log(f"  — {rotulo} —")
+            res = r.baixar(t, codigo, simular)
+            t.log(f"    {rotulo}: {res}")
+            partes.append(f"{rotulo}: {res}")
+        return " · ".join(partes)
