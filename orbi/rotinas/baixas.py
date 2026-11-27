@@ -39,9 +39,13 @@ def _r(xis, off):
 
 
 def valor(txt):
-    """'1.234,56' -> 1234.56; sem número -> None."""
-    m = re.search(r"-?\d{1,3}(?:[.\s]\d{3})*,\d{2}|-?\d+,\d{2}", txt or "")
-    return float(m.group(0).replace(".", "").replace(" ", "").replace(",", ".")) if m else None
+    """'1.234,56' (ou '0.76', como o OCR às vezes lê) -> 1234.56; sem número -> None."""
+    m = re.search(r"-?\d[\d.]*[.,]\d{2}(?!\d)", txt or "")
+    if not m:
+        return None
+    bruto = m.group(0).replace(" ", "")
+    inteiro, dec = bruto[:-3], bruto[-2:]
+    return float(re.sub(r"[.,]", "", inteiro) + "." + dec)
 
 
 def data_confere(txt, data):
