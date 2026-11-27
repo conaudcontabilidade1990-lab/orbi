@@ -171,21 +171,24 @@ class BaixarParcelas(Rotina):
         while esperado < limite:
             t.dormir(2)
             esperado += 2
-            if any(k in t.ler("mensagem") for k in ("aguarde", "processando", "gerando")):
-                iguais = 0
+            if t.ocupado() or any(k in t.ler("mensagem") for k in ("aguarde", "processando", "gerando")):
+                iguais = 0                       # Domínio trabalhando (cursor de espera ou aviso na tela)
                 continue
             atual = self._totais(t, bx)
             iguais = iguais + 1 if atual == ultimo else 0
             ultimo = atual
             deb, cred = atual
             pronto = deb is not None and cred is not None and deb == cred and deb > 0
-            if (pronto and iguais >= 2) or (iguais >= 10):     # ok estável, ou parado há ~20 s
+            # pronto: débito = crédito estável; zerado/diferente: só desiste depois de 3 min sem mudar nada
+            if (pronto and iguais >= 2) or (iguais >= 90):
                 break
             if esperado % 300 == 0:
                 t.log(f"  ainda gerando... {esperado // 60} min")
         deb, cred = ultimo or (None, None)
         ok = deb is not None and cred is not None and deb == cred and deb > 0
         if simular or not ok:
+            foto = t.foto(f"{'simulacao' if simular else 'nao_gravado'}_{codigo}")
+            t.log(f"  tela salva: {foto.name}")
             t.clicar_em(*_r(bx, B_CANCELAR), espera=1.0)
             t.aguardar(lambda: not imp._janela(t, "baixa de"), 10, intervalo=0.5)
             self._fechar_lista(t, xis)

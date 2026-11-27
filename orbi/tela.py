@@ -467,6 +467,26 @@ class Tela:
         return [(norm(tx), x0 + x, y0 + y, lw, lh, i)
                 for tx, x, y, lw, lh, i in ocr_palavras(img, self.cfg["idioma_ocr"], contraste)]
 
+    def ocupado(self):
+        """O cursor do mouse está de 'espera' (ampulheta/círculo)? O Domínio remoto mostra isso enquanto trabalha."""
+        try:
+            import ctypes
+            from ctypes import wintypes
+
+            class CURSORINFO(ctypes.Structure):
+                _fields_ = [("cbSize", wintypes.DWORD), ("flags", wintypes.DWORD),
+                            ("hCursor", wintypes.HANDLE), ("ptScreenPos", wintypes.POINT)]
+            u = ctypes.windll.user32
+            u.LoadCursorW.restype = wintypes.HANDLE
+            ci = CURSORINFO()
+            ci.cbSize = ctypes.sizeof(CURSORINFO)
+            if not u.GetCursorInfo(ctypes.byref(ci)):
+                return False
+            espera = {u.LoadCursorW(None, 32514), u.LoadCursorW(None, 32650)}   # IDC_WAIT, IDC_APPSTARTING
+            return ci.hCursor in espera
+        except Exception:
+            return False
+
     def imagem(self, regiao):
         self.checar()
         return pyautogui.screenshot(region=self.regiao(regiao)).convert("RGB")
