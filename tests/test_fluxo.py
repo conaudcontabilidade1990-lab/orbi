@@ -227,3 +227,10 @@ try:
 except Parar as e:
     assert "não fechou" in str(e) and dm.empresa == "315", e
 print("ok: fecha janelas abertas antes de trocar de empresa")
+
+# canto lido com traço no meio do código ('maria silva - 3-00') e confirmação pelo nome
+from orbi.dominio import codigo_no_canto, nome_confere  # noqa: E402
+assert codigo_no_canto("maria silva - 3-00") == "300" and codigo_no_canto("ria - 3-03") == "303"
+assert codigo_no_canto("loja teste - 303 out/2026") == "303" and codigo_no_canto("3-00 out/2026") == "300"
+assert nome_confere("maria silva", "MARIA JOSE DA SILVA") and not nome_confere("maria silva", "JOAO PEREIRA")
+print("ok: canto com traço no código")

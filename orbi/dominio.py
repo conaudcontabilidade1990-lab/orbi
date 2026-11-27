@@ -45,14 +45,42 @@ def trazer_para_frente(t):
                 f"(título lido: '{t.ler('titulo_app')}').")
 
 
+def codigo_no_canto(txt):
+    """Código lido no canto ('maria silva - 3-00' -> '300'): o número depois do ' - ' do nome, sem os
+    traços/pontos que o OCR às vezes enfia no meio dele."""
+    txt = txt or ""
+    numero = r"(\d(?:[\-.,']?\d)*)"
+    if re.match(r"\s*\d", txt):                     # só a área do código: começa pelo número
+        m = re.match(r"\s*" + numero, txt)
+    else:
+        m = re.search(r"-\s*" + numero, txt) or re.search(numero, txt)
+    return re.sub(r"\D", "", m.group(1)) if m else ""
+
+
+def nome_confere(lido, esperado):
+    """O apelido do canto ('maria silva') bate com o nome do cadastro ('MARIA JOSE DA SILVA')?"""
+    def palavras(x):
+        return {w for w in re.sub(r"[^a-z0-9 ]", " ", norm_txt(x)).split() if len(w) >= 3
+                and w not in ("ltda", "me", "eireli", "epp", "comercio", "servicos", "industria")}
+    a, b = palavras(lido), palavras(esperado)
+    return len(a) >= 1 and len(a & b) >= min(2, len(a))
+
+
+def norm_txt(x):
+    import unicodedata
+    return "".join(c for c in unicodedata.normalize("NFD", (x or "").lower()) if unicodedata.category(c) != "Mn")
+
+
 def empresa_ativa_e(t, codigo):
     """Confere o código da empresa ativa no canto superior direito. Lê a linha inteira e, se o
     código não vier (nome longe do código), lê só a área do código."""
     padrao = re.compile(rf"(?<!\d){re.escape(codigo)}(?!\d)")
-    if padrao.search(t.ler("empresa_ativa")):
+    linha = t.ler("empresa_ativa")
+    if padrao.search(linha) or codigo_no_canto(linha) == codigo:
         return True
     for fator in (4, 6):  # só o código, em preto e branco (lê bem números isolados)
-        if padrao.search(t.ler("empresa_codigo", fator=fator, binarizar=True, borda=12)):
+        txt = t.ler("empresa_codigo", fator=fator, binarizar=True, borda=12)
+        if padrao.search(txt) or codigo_no_canto(txt) == codigo:
             return True
     return False
 
@@ -113,6 +141,11 @@ def _confirmado_pela_linha(t, linha_ok, antes, codigo):
     depois = _digitos_canto(t)
     if depois and depois != antes and len(depois) == len(codigo):
         t.log(f"  empresa {codigo}: confirmada pela linha selecionada (o canto foi lido como '{depois}')")
+        return True
+    esperado = getattr(t, "nome_esperado", "")
+    lido = t.ler("empresa_ativa")
+    if esperado and nome_confere(lido, esperado):
+        t.log(f"  empresa {codigo}: confirmada pela linha selecionada e pelo nome no canto ('{lido[:40]}')")
         return True
     return False
 

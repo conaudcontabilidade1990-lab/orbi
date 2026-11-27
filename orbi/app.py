@@ -1225,6 +1225,7 @@ class App:
                 self.fila.put(("progresso", (i, len(empresas), cod)))
                 t.avisos = []
                 try:
+                    t.nome_esperado = nome
                     res = rot.executar_empresa(t, cod, simular)
                     st = "advertencia" if t.avisos else "sucesso"
                     resultados.append(Resultado(cod, res + (f" (avisos: {'; '.join(t.avisos)})" if t.avisos else "")))
