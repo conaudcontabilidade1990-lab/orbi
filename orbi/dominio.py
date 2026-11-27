@@ -258,8 +258,15 @@ def _menu(t, aceita, regiao, nome):
 
 def abrir_gerar_parcelas(t, ponto_menu, palavra_titulo):
     """Utilitários > Parcelas > Gerar Parcelas > (Entradas/Saídas/Serviços), achando cada item pelo texto."""
-    t.clicar("menu_utilitarios", espera=0.5)
-    navegar_menu_parcelas(t, palavra_titulo)
+    for tentativa in range(2):
+        t.clicar("menu_utilitarios", espera=0.5)
+        navegar_menu_parcelas(t, palavra_titulo)
+        # em empresa grande a janela demora a aparecer: espera até 20 s por ela (maximizada ou solta)
+        if t.aguardar(lambda: janela_maximizada(t, palavra_titulo) or t.botoes_fechar("area_janelas"), 20,
+                      intervalo=0.5):
+            break
+        if tentativa == 0:
+            t.log("  a janela Gerar Parcelas não apareceu; abrindo pelo menu de novo")
     _depois_do_menu(t, palavra_titulo)
 
 
