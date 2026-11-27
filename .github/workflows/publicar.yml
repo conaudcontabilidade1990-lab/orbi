@@ -14,6 +14,8 @@ permissions:
 jobs:
   build:
     runs-on: windows-latest
+    env:
+      ORBI_TESTE: "1"
     steps:
       - uses: actions/checkout@v4
 

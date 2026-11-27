@@ -25,6 +25,7 @@ PADRAO = {
         "sucesso": 600,         # espera "Parcelas geradas com sucesso." (listas grandes)
         "importacao": 1800,     # espera o Domínio carregar/gravar uma importação de XML
     },
+    "area_util_base": 728,      # parte de baixo da área útil (acima da barra de tarefas) onde foi calibrado
     "dominio_unidade": "M:",    # como o disco C: deste computador aparece no Domínio (GraphOn)
     "unidades_dominio": {"C:": "M:", "Z:": "Z:"},   # disco deste computador -> como o Domínio enxerga
     "limiar_caixa": 6,          # pixels escuros no centro da caixa = marcada

@@ -5,6 +5,7 @@ se o mouse for jogado no canto superior esquerdo (proteção do pyautogui).
 """
 import datetime as dt
 import re
+import os
 import threading
 import time
 import unicodedata
@@ -287,11 +288,42 @@ class Tela:
         self.cfg = cfg
         self.log = log
         self.parar = parar_evento or threading.Event()
-        self.P = cfg["pontos"]
-        self.R = cfg["regioes"]
+        self.P = dict(cfg["pontos"])
+        self.R = dict(cfg["regioes"])
         self.T = cfg["tempos"]
         self.avisos = []
+        self.ajustar_rodape()
         cfgmod.PASTA_LOGS.mkdir(parents=True, exist_ok=True)
+
+    # botões do rodapé das janelas maximizadas: acompanham a borda de baixo da área útil da tela
+    RODAPE = ("buscar", "busca_avancada", "todos", "gerar_abrir", "botao_buscar")
+
+    def ajustar_rodape(self):
+        """A barra de tarefas muda de altura (Windows 10: 40 px; Windows 11: 48 px), e o rodapé do Domínio
+        maximizado sobe ou desce junto. Corrige as posições do rodapé pela área útil deste computador."""
+        base = self.cfg.get("area_util_base", 728)
+        self.dy_rodape = 0
+        if os.environ.get("ORBI_TESTE"):          # testes com telas salvas: posições originais
+            return
+        try:
+            import ctypes
+            from ctypes import wintypes
+            r = wintypes.RECT()
+            ctypes.windll.user32.SystemParametersInfoW(0x30, 0, ctypes.byref(r), 0)   # SPI_GETWORKAREA
+            fundo = r.bottom
+        except Exception:
+            return
+        dy = fundo - base if fundo > 0 else 0
+        self.dy_rodape = dy
+        if not dy or abs(dy) > 80:
+            return
+        for n in self.RODAPE:
+            if n in self.P:
+                x, y = self.P[n]
+                self.P[n] = [x, y + dy]
+            if n in self.R:
+                x, y, w, h = self.R[n]
+                self.R[n] = [x, y + dy, w, h]
 
     def aviso(self, msg):
         """Algo fora do comum que não impediu a rotina (vira 'advertência' no Painel)."""
