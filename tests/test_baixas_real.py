@@ -41,6 +41,7 @@ for arq, botao in (("baixas_saidas_vazia.png", "receb"), ("baixas_entradas_vazia
         assert max(t.escuros_em(cx, y) for cx in range(x - 4, x + 5, 2)) >= 9, off
 
 atual["img"] = Image.open(F / "baixa_parcelas_gerada.png").convert("RGB")
+print("janelas:", t.botoes_fechar("area_janelas"), [imp._titulo_da_janela(t, x) for x in t.botoes_fechar("area_janelas")])
 bx = imp._janela(t, "baixa de parcelas")
 print("baixa X:", bx)
 assert bx and abs(bx[0] - 1070) <= 6
