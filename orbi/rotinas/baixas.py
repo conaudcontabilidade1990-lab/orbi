@@ -151,9 +151,18 @@ class BaixarParcelas(Rotina):
 
         t.clicar_em(*_r(xis, L_TODOS), espera=0.6)
         t.clicar_em(*_r(xis, L_PAGAR), espera=1.0)
-        bx = t.aguardar(lambda: imp._janela(t, "baixa de"), 20, intervalo=0.5)
+        # com muitas parcelas o Domínio demora para montar a tela de baixa: espera (até 30 min)
+        bx, esperado = None, 0
+        while not bx and esperado < 1800:
+            bx = t.aguardar(lambda: imp._janela(t, "baixa de"), 30, intervalo=0.5)
+            esperado += 30
+            if not bx:
+                m = t.ler("mensagem")
+                if "selecione" in m or "nenhuma parcela" in m:
+                    raise Parar(f"O Domínio avisou depois do {self.botao}: '{m[:120]}'. Não respondi nada.")
+                t.log(f"  aguardando a tela 'Baixa de Parcelas' abrir... {esperado // 60} min {esperado % 60} s")
         if not bx:
-            raise Parar(f"A tela 'Baixa de Parcelas' não abriu depois do {self.botao}.")
+            raise Parar(f"A tela 'Baixa de Parcelas' não abriu em 30 min depois do {self.botao}.")
 
         t.clicar_em(*_r(bx, B_GERAR), espera=1.5)
         t.log("  gerando os lançamentos contábeis... (pode demorar)")
