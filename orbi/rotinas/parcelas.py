@@ -6,6 +6,7 @@ Regras (iguais às rotinas manuais):
 - nunca "Excluir Parcelas"; nunca gerar duas vezes; qualquer coisa fora do previsto = parar.
 """
 import re
+import time
 
 from .. import dominio as d
 from ..tela import Parar
@@ -97,16 +98,45 @@ class GerarParcelas(Rotina):
         # Não cancela nem desiste cedo: o Domínio pode levar muito tempo gerando. Espera em blocos de 5 min,
         # avisando no registro, até 3 h (o botão Parar continua funcionando).
         limite = max(t.T.get("sucesso", 600), 3 * 3600)
-        esperado = 0
-        while esperado < limite:
-            bloco = min(300, limite - esperado)
-            if t.esperar("mensagem", {"sucesso": d.MSG["sucesso"]}, bloco, intervalo=1.0) == "sucesso":
-                break
-            esperado += bloco
-            t.log(f"  ainda gerando... {esperado // 60} min (esperando 'Parcelas geradas com sucesso.')")
-        else:
-            raise Parar("Não vi 'Parcelas geradas com sucesso.' em 3 horas. NÃO gerei de novo e não cancelei nada.")
-        t.clicar("btn_ok_sucesso", espera=0.6)
+        inicio = time.time()
+        proximo_aviso = 300
+        parado_desde = None      # Domínio sem trabalhar e tela sem mudar desde quando
+        dialogo_ok = 0           # leituras seguidas com o diálogo Gerar de volta e sem ampulheta
+        anterior = None
+        while True:
+            if t.esperar("mensagem", {"sucesso": d.MSG["sucesso"]}, 3, intervalo=1.0) == "sucesso":
+                t.clicar("btn_ok_sucesso", espera=0.6)
+                return
+            passou = time.time() - inicio
+            ocupado = t.ocupado()
+            # Às vezes o Domínio termina SEM mostrar a mensagem: o diálogo Gerar volta (ou a tela para).
+            if not ocupado and passou > 8 and "quantidade de parcelas" in t.ler("dialogo_gerar"):
+                dialogo_ok += 1
+                if dialogo_ok >= 3:
+                    t.log("  terminou sem a mensagem de sucesso (o diálogo Gerar voltou) — confiro pela nova busca")
+                    return
+            else:
+                dialogo_ok = 0
+            try:
+                img = t.imagem("area_janelas").resize((160, 90))
+            except Exception:
+                img = None
+            igual = img is not None and anterior is not None and _quase_igual(img, anterior)
+            anterior = img
+            if ocupado or not igual:
+                parado_desde = None
+            elif parado_desde is None:
+                parado_desde = time.time()
+            elif time.time() - parado_desde >= 180:
+                t.foto("gerar_sem_mensagem")
+                t.log("  tela parada há 3 min, sem ampulheta e sem mensagem — considero terminado e confiro pela "
+                      "nova busca (não gero de novo)")
+                return
+            if passou >= proximo_aviso:
+                t.log(f"  ainda gerando... {int(passou) // 60} min (esperando 'Parcelas geradas com sucesso.')")
+                proximo_aviso += 300
+            if passou >= limite:
+                raise Parar("Não vi 'Parcelas geradas com sucesso.' em 3 horas. NÃO gerei de novo e não cancelei nada.")
 
     def _fechar_dialogo_apos_gerar(self, t):
         """Depois do OK do sucesso o Domínio mostra de novo o diálogo Gerar: espera ele voltar e cancela."""
@@ -146,6 +176,13 @@ class GerarParcelas(Rotina):
             raise Parar("Depois de gerar, a nova busca ainda trouxe notas. Não gerei de novo.")
         d.fechar_janela(t)
         return f"parcelas geradas (1 parcela, {self.dias} dia)"
+
+
+def _quase_igual(a, b, tolerancia=6):
+    """Duas miniaturas da tela praticamente iguais (o relógio/cursor piscando não conta)."""
+    from PIL import ImageChops, ImageStat
+    dif = ImageStat.Stat(ImageChops.difference(a, b)).mean
+    return sum(dif) / len(dif) < tolerancia / 10
 
 
 class GerarParcelasEntradas(GerarParcelas):
