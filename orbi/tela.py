@@ -310,10 +310,29 @@ class Tela:
             time.sleep(min(0.2, max(0, fim - time.time())))
 
     def conferir_resolucao(self):
+        """O Orbi foi calibrado em 1366x768 com escala de 100%. Se a tela estiver diferente e o monitor
+        aceitar 1366x768, muda a resolução sozinho (fica gravado); senão, diz o que ajustar."""
+        alvo = list(self.cfg["resolucao"])
+        try:
+            from . import monitor
+            esc = monitor.escala()
+        except Exception:
+            monitor, esc = None, 100
+        if esc != 100:
+            raise Parar(f"A escala do Windows está em {esc}%. Ponha em 100%: botão direito na Área de Trabalho > "
+                        "Configurações de exibição > Escala e layout > 100% (depois saia e entre de novo no Windows).")
         atual = list(pyautogui.size())
-        if atual != list(self.cfg["resolucao"]):
-            raise Parar(f"Resolução da tela {atual[0]}x{atual[1]} diferente da calibrada "
-                        f"{self.cfg['resolucao'][0]}x{self.cfg['resolucao'][1]}.")
+        if atual == alvo:
+            return
+        if monitor and self.cfg.get("ajustar_resolucao", True) and tuple(alvo) in monitor.suportadas():
+            self.log(f"Tela em {atual[0]}x{atual[1]}: mudando para {alvo[0]}x{alvo[1]} (resolução em que o Orbi foi calibrado).")
+            if monitor.mudar(*alvo):
+                atual = list(pyautogui.size())
+                if atual == alvo:
+                    self.dormir(2)
+                    return
+        raise Parar(f"Resolução da tela {atual[0]}x{atual[1]}; o Orbi precisa de {alvo[0]}x{alvo[1]}. "
+                    "Ajuste em: botão direito na Área de Trabalho > Configurações de exibição > Resolução da tela.")
 
     # ---- ações ----
     def clicar(self, nome, triplo=False, espera=None):
