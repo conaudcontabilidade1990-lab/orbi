@@ -22,7 +22,7 @@ def palavra_perto(ponto, prefixos):
 
 for arq, botao in (("baixas_saidas_vazia.png", "receb"), ("baixas_entradas_vazia.png", "pagar")):
     atual["img"] = Image.open(F / arq).convert("RGB")
-    xis = imp._janela(t, "parcelas a")
+    xis = b._janela_lista(t)
     print(arq, "X:", xis, [imp._titulo_da_janela(t, x) for x in t.botoes_fechar("area_janelas")])
     assert xis and abs(xis[0] - 1118) <= 6, xis
     ini, fim = t.ler(b._r(xis, b.L_LER_INI)), t.ler(b._r(xis, b.L_LER_FIM))
@@ -42,7 +42,7 @@ for arq, botao in (("baixas_saidas_vazia.png", "receb"), ("baixas_entradas_vazia
 
 atual["img"] = Image.open(F / "baixa_parcelas_gerada.png").convert("RGB")
 print("janelas:", t.botoes_fechar("area_janelas"), [imp._titulo_da_janela(t, x) for x in t.botoes_fechar("area_janelas")])
-bx = imp._janela(t, "baixa de parcelas")
+bx = imp._janela(t, "baixa de")
 print("baixa X:", bx)
 assert bx and abs(bx[0] - 1070) <= 6
 print("  totais:", t.ler(b._r(bx, b.B_DEBITO)), "|", t.ler(b._r(bx, b.B_CREDITO)))

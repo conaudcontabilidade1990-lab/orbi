@@ -51,6 +51,15 @@ def data_confere(txt, data):
     return re.search(padrao, (txt or "").replace(" ", "")) is not None
 
 
+def _janela_lista(t):
+    """[X] da janela 'Parcelas a Pagar/Receber' (o OCR às vezes lê 'parceias')."""
+    for xis in t.botoes_fechar("area_janelas"):
+        tit = imp._titulo_da_janela(t, xis)
+        if ("pagar" in tit or "receber" in tit) and "baixa" not in tit:
+            return xis
+    return None
+
+
 def periodo_da_competencia(comp):
     (a1, m1), (a2, m2) = comp
     return dt.date(a1, m1, 1), dt.date(a2, m2, calendar.monthrange(a2, m2)[1])
@@ -77,7 +86,7 @@ class BaixarParcelas(Rotina):
         xb, _ = imp._item(t, "baixas", MENU_MOVIMENTOS, toda, "Baixas")
         imp._item(t, self.item, MENU_BAIXAS + MENU_MOVIMENTOS, (xb + 150, 0, W - xb - 150, H - 40),
                   self.item.capitalize())
-        xis = t.aguardar(lambda: imp._janela(t, "parcelas a"), 10, intervalo=0.4)
+        xis = t.aguardar(lambda: _janela_lista(t), 10, intervalo=0.4)
         if not xis:
             raise Parar(f"A tela 'Parcelas a {self.titulo}' não abriu.")
         return xis
@@ -100,7 +109,7 @@ class BaixarParcelas(Rotina):
 
     def _fechar_lista(self, t, xis):
         t.clicar_em(*_r(xis, L_FECHAR), espera=0.8)
-        if not t.aguardar(lambda: not imp._janela(t, "parcelas a"), 5, intervalo=0.4):
+        if not t.aguardar(lambda: not _janela_lista(t), 5, intervalo=0.4):
             d.fechar_janelas_abertas(t)
 
     def _totais(self, t, bx):
@@ -133,7 +142,7 @@ class BaixarParcelas(Rotina):
 
         t.clicar_em(*_r(xis, L_TODOS), espera=0.6)
         t.clicar_em(*_r(xis, L_PAGAR), espera=1.0)
-        bx = t.aguardar(lambda: imp._janela(t, "baixa de parcelas"), 20, intervalo=0.5)
+        bx = t.aguardar(lambda: imp._janela(t, "baixa de"), 20, intervalo=0.5)
         if not bx:
             raise Parar(f"A tela 'Baixa de Parcelas' não abriu depois do {self.botao}.")
 
@@ -160,7 +169,7 @@ class BaixarParcelas(Rotina):
         ok = deb is not None and cred is not None and deb == cred and deb > 0
         if simular or not ok:
             t.clicar_em(*_r(bx, B_CANCELAR), espera=1.0)
-            t.aguardar(lambda: not imp._janela(t, "baixa de parcelas"), 10, intervalo=0.5)
+            t.aguardar(lambda: not imp._janela(t, "baixa de"), 10, intervalo=0.5)
             self._fechar_lista(t, xis)
             if simular:
                 return f"SIMULAÇÃO — débito {deb} / crédito {cred}; cancelado, nada gravado"
@@ -177,7 +186,7 @@ class BaixarParcelas(Rotina):
                         f"(último aviso lido: '{t.ler('mensagem')[:120]}'). Não cliquei em mais nada.")
         t.teclas("enter")
         t.dormir(1.0)
-        if imp._janela(t, "baixa de parcelas"):
+        if imp._janela(t, "baixa de"):
             raise Parar("Depois de gravar, a tela 'Baixa de Parcelas' continuou aberta. Parei para conferir.")
         self._fechar_lista(t, xis)
         return f"baixado e gravado — débito = crédito = {deb:.2f}"
