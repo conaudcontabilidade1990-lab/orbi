@@ -93,9 +93,19 @@ class GerarParcelas(Rotina):
         if t.esperar("mensagem", {"certeza": d.MSG["certeza"]}, t.T["confirmacao"]) != "certeza":
             raise Parar("Não apareceu a confirmação 'Você tem certeza...' — não cliquei em nada.")
         t.clicar("btn_sim", espera=0.3)
-        t.log("  gerando... aguardando a mensagem de sucesso")
-        if t.esperar("mensagem", {"sucesso": d.MSG["sucesso"]}, t.T["sucesso"], intervalo=0.8) != "sucesso":
-            raise Parar("Não vi 'Parcelas geradas com sucesso.' no tempo limite. NÃO gerei de novo.")
+        t.log("  gerando... aguardando a mensagem de sucesso (pode demorar em empresas com muito movimento)")
+        # Não cancela nem desiste cedo: o Domínio pode levar muito tempo gerando. Espera em blocos de 5 min,
+        # avisando no registro, até 3 h (o botão Parar continua funcionando).
+        limite = max(t.T.get("sucesso", 600), 3 * 3600)
+        esperado = 0
+        while esperado < limite:
+            bloco = min(300, limite - esperado)
+            if t.esperar("mensagem", {"sucesso": d.MSG["sucesso"]}, bloco, intervalo=1.0) == "sucesso":
+                break
+            esperado += bloco
+            t.log(f"  ainda gerando... {esperado // 60} min (esperando 'Parcelas geradas com sucesso.')")
+        else:
+            raise Parar("Não vi 'Parcelas geradas com sucesso.' em 3 horas. NÃO gerei de novo e não cancelei nada.")
         t.clicar("btn_ok_sucesso", espera=0.6)
 
     def _fechar_dialogo_apos_gerar(self, t):
