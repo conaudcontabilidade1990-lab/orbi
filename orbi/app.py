@@ -22,7 +22,7 @@ except Exception:
 import customtkinter as ctk
 from PIL import Image
 
-from . import central, VERSAO, agenda, atualizacao, conta, estatisticas, portal, sessao
+from . import central, retomar, VERSAO, agenda, atualizacao, conta, estatisticas, portal, sessao
 from . import config as cfgmod
 from .borda import Borda
 from .graficos import COR, Anel, Barras, contar, cor
@@ -458,9 +458,21 @@ class App:
         ctk.CTkLabel(self.fr_periodo, text="dd/mm/aaaa", font=fonte(11), text_color=COR["suave"]).pack(side="left", padx=10)
         self._acoes_antes = None
 
+        self.fr_retomar = ctk.CTkFrame(f, fg_color=COR["caixa"], corner_radius=10, border_width=1,
+                                       border_color=COR["advertencia"])
+        self.lbl_retomar = ctk.CTkLabel(self.fr_retomar, text="", font=fonte(12), text_color=COR["texto"],
+                                        justify="left", anchor="w", wraplength=520)
+        self.lbl_retomar.pack(side="left", fill="x", expand=True, padx=12, pady=8)
+        ctk.CTkButton(self.fr_retomar, text="Descartar", width=90, height=30, corner_radius=8, fg_color=COR["borda"],
+                      hover_color=COR["trilho"], text_color=COR["texto"], command=self._descartar_retomar
+                      ).pack(side="right", padx=(4, 10))
+        ctk.CTkButton(self.fr_retomar, text="Continuar de onde parou", height=30, corner_radius=8,
+                      command=self._continuar_retomar).pack(side="right", padx=4)
+
         acoes = ctk.CTkFrame(f, fg_color="transparent")
         acoes.pack(fill="x")
         self._acoes_antes = acoes
+        self.root.after(200, self._mostrar_retomar)
         self.var_simular = tk.BooleanVar(value=True)
         ctk.CTkSwitch(acoes, text="Simular (vai até o diálogo e cancela)", variable=self.var_simular,
                       font=fonte(12), text_color=COR["texto"], progress_color=COR["advertencia"]).pack(side="left")
@@ -993,6 +1005,8 @@ class App:
                     self._contar_resultado(msg)
                 elif alvo == "fim":
                     self._fim()
+                elif alvo == "retomar":
+                    self._mostrar_retomar()
                 elif alvo == "empresas":
                     self._empresas_chegaram(*msg)
                 elif alvo == "agenda":
@@ -1260,6 +1274,22 @@ class App:
                 self.log(f"!! Erro inesperado: {type(e).__name__}: {e}")
                 self.log(traceback.format_exc())
         feitas = {r.empresa for r in resultados}
+        # memória para continuar: as que não foram feitas (a que parou entra de novo); Agenda não usa
+        ok = {r.empresa for r in resultados if not r.texto.startswith("PARADO")}
+        pendentes = [c for c in empresas if c not in ok]
+        if self.agendamento_atual is None:
+            if pendentes and len(pendentes) < len(empresas) + 1:
+                per = getattr(rot, "periodo", None)
+                retomar.salvar({
+                    "rotina": rot.id, "nome_rotina": rot.nome, "pendentes": pendentes, "total": len(empresas),
+                    "nomes": {c: getattr(self, "nomes_exec", {}).get(c, "") for c in pendentes},
+                    "simular": simular, "competencia": rot.competencia,
+                    "periodo": [per[0].isoformat(), per[1].isoformat()] if per else None,
+                    "pasta_base": getattr(rot, "pasta_base", ""),
+                    "motivo": next((r.texto for r in resultados if r.texto.startswith("PARADO")), "interrompida")[:200]})
+            else:
+                retomar.limpar()
+            self.fila.put(("retomar", ""))
         linhas = [f"{r.empresa}: {r.texto}" for r in resultados]
         linhas += [f"{c}: pulada na checagem — {m}" for c, m in pulos.items()]
         linhas += [f"{c}: não processada" for c in empresas if c not in feitas]
@@ -1274,6 +1304,56 @@ class App:
         for l in linhas:
             self.log(l)
         self.fila.put(("fim", ""))
+
+    # ------------------------------ continuar de onde parou ------------------------------
+    def _mostrar_retomar(self):
+        fr = getattr(self, "fr_retomar", None)
+        if fr is None or not fr.winfo_exists():
+            return
+        e = retomar.carregar()
+        if not e or self.rodando:
+            fr.pack_forget()
+            return
+        prim = e["pendentes"][0]
+        self.lbl_retomar.configure(text=(
+            f"A rodada \"{e.get('nome_rotina', e['rotina'])}\" de {e.get('quando', '')} parou na empresa {prim} "
+            f"— faltam {len(e['pendentes'])} de {e.get('total', '?')}"
+            + (" (simulação)" if e.get("simular") else "") + "."))
+        fr.pack(fill="x", pady=(0, 10), before=self._acoes_antes)
+
+    def _descartar_retomar(self):
+        retomar.limpar()
+        self._mostrar_retomar()
+
+    def _continuar_retomar(self):
+        e = retomar.carregar()
+        if not e or self.rodando:
+            return
+        rot = next((r for r in ROTINAS if r.id == e["rotina"]), None)
+        if rot is None:
+            messagebox.showwarning("Orbi", "Essa rotina não existe mais nesta versão do Orbi.")
+            return
+        if rot.usa_competencia:
+            comp = e.get("competencia")
+            if comp:
+                rot.competencia = (tuple(comp[0]), tuple(comp[1]))
+            else:
+                a, b = self._competencia_padrao()
+                rot.competencia = (self._ler_competencia(a), self._ler_competencia(b))
+        if getattr(rot, "usa_periodo", False):
+            p = e.get("periodo")
+            rot.periodo = (dt.date.fromisoformat(p[0]), dt.date.fromisoformat(p[1])) if p else None
+        if rot.usa_pasta_xml:
+            rot.pasta_base = e.get("pasta_base") or self.cfg.get("pasta_xml") or self._pasta_xml_padrao()
+        simular = bool(e.get("simular"))
+        if not messagebox.askyesno("Orbi", f"Continuar \"{rot.nome}\" a partir da empresa {e['pendentes'][0]}?\n\n"
+                                   f"{len(e['pendentes'])} empresa(s) — "
+                                   + ("SIMULAÇÃO" if simular else "GERAÇÃO REAL") + "."):
+            return
+        self.nomes_exec = dict(e.get("nomes") or {})
+        self.fr_retomar.pack_forget()
+        self.log(f"Continuando \"{rot.nome}\" de onde parou ({len(e['pendentes'])} empresa(s)).")
+        self._comecar(rot, list(e["pendentes"]), simular)
 
     def _fim(self):
         self.rodando = False
